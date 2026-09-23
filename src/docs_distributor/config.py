@@ -454,36 +454,57 @@ def _check_rules(rules: Sequence[MappingRule], vocabulary: Vocabulary) -> list[s
     """Cross-rule checks. Each is a mapping that could never pass the audit, or would pass it
     by accident."""
     problems: list[str] = []
-    seen: dict[str, int] = {}
-    reals = [(r, v.casefold()) for r in rules if not r.regex for v in (r.source, *r.variants)]
-    for rule, value in reals:
-        if value in seen and seen[value] != rule.index:
-            problems.append(f"{rule.label}: duplicates the value of rule {seen[value]}")
-        seen.setdefault(value, rule.index)
+    seen: dict[str, MappingRule] = {}
+    for rule in rules:
+        if rule.regex:
+            continue
+        for value in (rule.source, *rule.variants):
+            key = value.casefold()
+            other = seen.get(key)
+            # Case-exact rules may split one spelling into several ("CSAM3" and "csam3"); any
+            # other overlap is two rules claiming the same text.
+            if (
+                other is not None
+                and other.index != rule.index
+                and not (
+                    rule.case == "exact" and other.case == "exact" and value not in _values(other)
+                )
+            ):
+                problems.append(f"{rule.label}: duplicates the value of rule {other.index}")
+            seen.setdefault(key, rule)
 
+    literals = [lit for rule in rules for lit in rule.literals()]
     # Vocabulary only. Counting the mapping's own targets as placeholders here would exempt
     # every target from the very check that is meant to vet it.
-    empty = audit.Rules(
+    vocab_only = audit.Rules(
         literals=(), allow=audit.Allowlist(), placeholders=vocabulary.placeholders()
     )
     for rule in rules:
-        target = rule.target.casefold()
-        for other, value in reals:
-            if value and value in target:
-                problems.append(
-                    f"{rule.label}: its placeholder contains the real value of rule {other.index}"
-                )
-                break
+        # The same literal matcher the gate uses: a placeholder that contains a real value,
+        # as the gate would see it, can never pass.
+        hits = audit.audit_files(
+            {}, audit.Rules(literals=tuple(literals)), extra_texts={"placeholder": rule.target}
+        ).findings
+        owners = sorted({h.detail for h in hits if h.layer == 1})
+        if owners:
+            problems.append(
+                f"{rule.label}: its placeholder contains a real value ({', '.join(owners)})"
+            )
         # A placeholder is text we are about to publish, so it has to pass the gate on its
         # own. This is what stops a real-looking domain, address or account being used as a
-        # stand-in: 'client-a.nl' is somebody's domain; 'client-a.example' is nobody's.
-        hits = audit.audit_files({}, empty, extra_texts={"placeholder": rule.target}).findings
+        # stand-in: a stand-in under a real TLD is somebody's domain; under .example it is
+        # nobody's.
+        hits = audit.audit_files({}, vocab_only, extra_texts={"placeholder": rule.target}).findings
         if hits:
             problems.append(
                 f"{rule.label}: its placeholder would fail the audit "
                 f"({', '.join(sorted({h.rule for h in hits}))})"
             )
     return problems
+
+
+def _values(rule: MappingRule) -> tuple[str, ...]:
+    return (rule.source, *rule.variants)
 
 
 def mapping_documents(path: Path) -> list[tuple[str, Any]]:

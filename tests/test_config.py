@@ -51,7 +51,7 @@ def test_placeholder_on_a_reserved_domain_is_accepted() -> None:
 
 def test_placeholder_containing_the_real_value_is_refused() -> None:
     errs = problems({"from": "Acme", "to": "Acme Placeholder Ltd", "class": "org"})
-    assert any("contains the real value" in e for e in errs)
+    assert any("contains a real value" in e for e in errs)
 
 
 def test_public_address_placeholder_is_refused_and_documentation_range_accepted() -> None:
@@ -157,3 +157,18 @@ def test_mkdocs_python_tags_load_without_executing(tmp_path: Path) -> None:
     data = config.load_yaml(f)
     assert data["x"] == "os.system"
     assert data["nav"] == [{"Home": "index.md"}]
+
+
+def test_case_exact_rules_may_split_one_spelling() -> None:
+    mapping(
+        {"from": "HBX3", "to": "Legacy3", "class": "product", "case": "exact"},
+        {"from": "hbx3", "to": "legacy3", "class": "product", "case": "exact"},
+    )
+
+
+def test_short_real_value_inside_a_longer_placeholder_word_is_fine() -> None:
+    # The gate matches short values as whole words, so "HB" is not in "sample".
+    mapping(
+        {"from": "HB", "to": "Example", "class": "org", "case": "exact"},
+        {"from": "Jan de Vries", "to": "sample", "class": "person"},
+    )

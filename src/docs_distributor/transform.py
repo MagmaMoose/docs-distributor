@@ -30,7 +30,7 @@ import posixpath
 import re
 import unicodedata
 from collections import Counter
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from urllib.parse import urlsplit
@@ -53,9 +53,6 @@ class Substituted:
     text: str
     replacements: list[Replacement]
     misaligned: list[int]  # output offsets where padding could not absorb a longer value
-
-
-_BORDER = "│┃║|"
 
 
 def _case_like(template: str, target: str) -> str:
@@ -106,30 +103,79 @@ class Substituter:
         return self._exact.get(key) or self._by_key.get(key.casefold())
 
     def apply(self, text: str, *, code: bool = False) -> Substituted:
-        """Substitute ``text``. With ``code`` set, keep columns after each replacement."""
+        """Substitute ``text``. Code keeps every aligned column where it was (see
+        :meth:`_substitute_aligned`)."""
+        return self._substitute_aligned(text) if code else self._substitute(text)
+
+    def _substitute(self, text: str) -> Substituted:
         replacements: list[Replacement] = []
-        misaligned: list[int] = []
         for rx, rule in self._regex:
-            text = self._sub(rx, text, lambda m, rule=rule: rule, code, replacements, misaligned)
+            text = self._sub(rx, text, lambda m, rule=rule: rule, replacements)
         if self._literal is not None:
             text = self._sub(
-                self._literal,
-                text,
-                lambda m: self._rule_for(m.group(0)),
-                code,
-                replacements,
-                misaligned,
+                self._literal, text, lambda m: self._rule_for(m.group(0)), replacements
             )
-        return Substituted(text, replacements, misaligned)
+        return Substituted(text, replacements, [])
+
+    def _substitute_aligned(self, text: str) -> Substituted:
+        """Code, line by line. Each line is split into cells at its alignment gaps (two or
+        more spaces, and the single space beside a box border), every cell is substituted in
+        full, and the gaps are re-padded so each cell starts in the column it started in.
+        A tree diagram's comments, a table's borders and a YAML block's values stay put,
+        and nothing inside a cell escapes substitution because its neighbour changed length.
+        """
+        out: list[str] = []
+        replacements: list[Replacement] = []
+        misaligned: list[int] = []
+        base = 0
+        for line in text.splitlines(keepends=True):
+            body = line.rstrip("\r\n")
+            ending = line[len(body) :]
+            new_body, reps, bad = self._align_line(body)
+            replacements.extend(
+                Replacement(r.rule_index, r.start + base, r.end + base, r.original) for r in reps
+            )
+            if bad:
+                misaligned.append(base)
+            out.append(new_body + ending)
+            base += len(new_body) + len(ending)
+        return Substituted("".join(out), replacements, misaligned)
+
+    def _align_line(self, line: str) -> tuple[str, list[Replacement], bool]:
+        cells: list[tuple[int, str]] = []
+        pos = len(line) - len(line.lstrip(" "))
+        for m in _GAP.finditer(line, pos):
+            if m.start() > pos:
+                cells.append((pos, line[pos : m.start()]))
+            pos = m.end()
+        if pos < len(line):
+            cells.append((pos, line[pos:]))
+        if not cells:
+            return line, [], False
+        out = line[: cells[0][0]]
+        reps: list[Replacement] = []
+        bad = False
+        for i, (column, cell) in enumerate(cells):
+            if i:
+                gap = column - len(out)
+                if gap < 1:
+                    gap, bad = 1, True
+                out += " " * gap
+            sub = self._substitute(cell)
+            reps.extend(
+                Replacement(r.rule_index, r.start + len(out), r.end + len(out), r.original)
+                for r in sub.replacements
+            )
+            out += sub.text
+        last_col, last = cells[-1]
+        return out + line[last_col + len(last) :], reps, bad
 
     @staticmethod
     def _sub(
         rx: re.Pattern[str],
         text: str,
         pick: object,
-        code: bool,
         replacements: list[Replacement],
-        misaligned: list[int],
     ) -> str:
         out: list[str] = []
         pos = 0
@@ -141,7 +187,7 @@ class Substituter:
         moved: list[tuple[int, int]] = []  # (input offset, delta) checkpoints
         for m in rx.finditer(text):
             rule = pick(m)  # type: ignore[operator]
-            if rule is None or m.start() < pos:
+            if rule is None:
                 continue
             original = m.group(0)
             target = _case_like(original, rule.target) if rule.case == "preserve" else rule.target
@@ -149,21 +195,14 @@ class Substituter:
             # so the line count, and a list item's continuation, survive.
             target += "".join(re.findall(r"\n[ \t]*", original))
             out.append(text[pos : m.start()])
-            end = m.end()
-            if code and "\n" not in original:
-                target, end, bad = _keep_columns(text, m.start(), m.end(), target)
-                if bad:
-                    misaligned.append(m.start() + shift)
             start_out = m.start() + shift
             out.append(target)
-            # The span may now include the rest of the token and its padding; record what it
-            # replaced, so punctuation checks compare like with like.
             replacements.append(
-                Replacement(rule.index, start_out, start_out + len(target), text[m.start() : end])
+                Replacement(rule.index, start_out, start_out + len(target), original)
             )
-            shift += len(target) - (end - m.start())
-            moved.append((end, shift))
-            pos = end
+            shift += len(target) - (m.end() - m.start())
+            moved.append((m.end(), shift))
+            pos = m.end()
         out.append(text[pos:])
         for r in earlier:
             delta = 0
@@ -177,31 +216,9 @@ class Substituter:
         return "".join(out)
 
 
-def _keep_columns(text: str, start: int, end: int, target: str) -> tuple[str, int, bool]:
-    """Absorb a length change into the padding that follows, when there is padding.
-
-    The padding is the first run of spaces after the replaced value and the rest of its
-    token, so ``hb-acc/        # comment`` keeps its comment column when ``hb-acc`` grows.
-    Returns the (possibly re-padded) replacement, the input offset it now extends to, and
-    whether a longer value could not be absorbed.
-    """
-    delta = len(target) - (end - start)
-    if delta == 0:
-        return target, end, False
-    line_end = text.find("\n", end)
-    line_end = len(text) if line_end == -1 else line_end
-    m = re.match(r"([^ ]*)( +)", text[end:line_end])
-    if m is None:
-        return target, end, False
-    rest, spaces = m.group(1), len(m.group(2))
-    after = text[end + m.end() : end + m.end() + 1]
-    aligned = spaces >= 2 or (after != "" and after in _BORDER)
-    if not aligned:
-        return target, end, False
-    new_spaces = spaces - delta
-    if new_spaces < 1:
-        return target + rest + " ", end + m.end(), True
-    return target + rest + " " * new_spaces, end + m.end(), False
+# The gaps that align a line of code: two or more spaces, or the single space that sits
+# between a box border and its content.
+_GAP = re.compile(r" {2,}| (?=[│┃║|])|(?<=[│┃║|]) ")
 
 
 # --- Markdown structure ------------------------------------------------------------------
@@ -251,13 +268,46 @@ def segments(text: str) -> list[Segment]:
 _CODE_SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1", re.DOTALL)
 
 
-def _outside_code_spans(text: str) -> Iterator[tuple[int, int]]:
-    """(start, end) ranges of ``text`` that are not inside inline code spans."""
-    pos = 0
+def mask_code_spans(text: str) -> str:
+    """``text`` with the inside of every inline code span replaced by ``x``, same length.
+
+    Link patterns run over the masked copy and edit the original at the same offsets. That
+    way a link whose TEXT is a code span (``[`dir/`](url)``) still parses as one link, while
+    a URL or link written inside a code span is never touched.
+    """
+    out = list(text)
     for m in _CODE_SPAN.finditer(text):
-        yield pos, m.start()
+        ticks = len(m.group(1))
+        for i in range(m.start() + ticks, m.end() - ticks):
+            if out[i] != "\n":
+                out[i] = "x"
+    return "".join(out)
+
+
+class _Orig:
+    """A match found on the masked text, read back from the original text."""
+
+    def __init__(self, text: str, m: re.Match[str]) -> None:
+        self.text, self.m = text, m
+
+    def group(self, name: str | int = 0) -> str:
+        start, end = self.m.span(name)
+        return "" if start < 0 else self.text[start:end]
+
+    def start(self, name: str | int = 0) -> int:
+        return self.m.start(name)
+
+
+def _sub_outside_code(rx: re.Pattern[str], text: str, repl: object) -> str:
+    masked = mask_code_spans(text)
+    out: list[str] = []
+    pos = 0
+    for m in rx.finditer(masked):
+        out.append(text[pos : m.start()])
+        out.append(repl(_Orig(text, m)))  # type: ignore[operator]
         pos = m.end()
-    yield pos, len(text)
+    out.append(text[pos:])
+    return "".join(out)
 
 
 # --- links -------------------------------------------------------------------------------
@@ -315,19 +365,9 @@ def slugify(value: str, separator: str = "-") -> str:
 
 
 def rewrite_links(text: str, ctx: LinkContext, stats: LinkStats) -> str:
-    """Rewrite the links in one prose segment. Code spans are left alone."""
-    parts: list[str] = []
-    last = 0
-    for lo, hi in _outside_code_spans(text):
-        parts.append(text[last:lo])
-        parts.append(_rewrite_region(text[lo:hi], ctx, stats))
-        last = hi
-    parts.append(text[last:])
-    return "".join(parts)
+    """Rewrite the links in one prose segment. Nothing inside a code span is touched."""
 
-
-def _rewrite_region(region: str, ctx: LinkContext, stats: LinkStats) -> str:
-    def link(m: re.Match[str]) -> str:
+    def link(m: _Orig) -> str:
         bang, label, target = m.group("bang"), m.group("text"), m.group("target").strip("<>")
         title = m.group("title") or ""
         if target.startswith("#"):
@@ -356,23 +396,15 @@ def _rewrite_region(region: str, ctx: LinkContext, stats: LinkStats) -> str:
         stats.unpublished += 1
         return _as_code(label or path)
 
-    region = _LINK.sub(link, region)
-
-    def auto(m: re.Match[str]) -> str:
+    def url(m: _Orig) -> str:
         if _is_private_url(m.group("url"), ctx):
             stats.private += 1
             return f"`{m.group('url')}`"
         return m.group(0)
 
-    region = _AUTOLINK.sub(auto, region)
-
-    def bare(m: re.Match[str]) -> str:
-        if _is_private_url(m.group("url"), ctx):
-            stats.private += 1
-            return f"`{m.group('url')}`"
-        return m.group(0)
-
-    return _BARE_URL.sub(bare, region)
+    text = _sub_outside_code(_LINK, text, link)
+    text = _sub_outside_code(_AUTOLINK, text, url)
+    return _sub_outside_code(_BARE_URL, text, url)
 
 
 def _relative(ctx: LinkContext, resolved: str) -> str:

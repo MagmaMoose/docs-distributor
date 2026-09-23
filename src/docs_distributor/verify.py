@@ -24,7 +24,7 @@ from pathlib import Path
 from docs_distributor.transform import (
     _LINK,
     GENERATED_NOTE_LINES,
-    _outside_code_spans,
+    mask_code_spans,
     segments,
     slugify,
 )
@@ -102,21 +102,21 @@ def check_links(files: Mapping[str, str], known: set[str]) -> tuple[list[str], l
         for seg in segments(files[path]):
             if seg.code:
                 continue
-            for lo, hi in _outside_code_spans(seg.text):
-                for m in _LINK.finditer(seg.text[lo:hi]):
-                    target = m.group("target").strip("<>")
-                    if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
-                        continue
-                    rel, _, anchor = target.partition("#")
-                    resolved = posixpath.normpath(posixpath.join(posixpath.dirname(path), rel))
-                    line = seg.first_line + seg.text[: lo + m.start()].count("\n")
-                    if resolved not in known:
-                        errors.append(f"{path}:{line}: link to {rel} does not resolve")
-                        continue
-                    if anchor and resolved in files:
-                        heads = anchor_cache.setdefault(resolved, anchors_of(files[resolved]))
-                        if anchor not in heads:
-                            warnings.append(f"{path}:{line}: anchor #{anchor} not found in {rel}")
+            masked = mask_code_spans(seg.text)
+            for m in _LINK.finditer(masked):
+                target = seg.text[m.start("target") : m.end("target")].strip("<>")
+                if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
+                    continue
+                rel, _, anchor = target.partition("#")
+                resolved = posixpath.normpath(posixpath.join(posixpath.dirname(path), rel))
+                line = seg.first_line + seg.text[: m.start()].count("\n")
+                if resolved not in known:
+                    errors.append(f"{path}:{line}: link to {rel} does not resolve")
+                    continue
+                if anchor and resolved in files:
+                    heads = anchor_cache.setdefault(resolved, anchors_of(files[resolved]))
+                    if anchor not in heads:
+                        warnings.append(f"{path}:{line}: anchor #{anchor} not found in {rel}")
     return errors, warnings
 
 

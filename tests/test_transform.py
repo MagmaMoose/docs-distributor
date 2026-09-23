@@ -294,3 +294,27 @@ def test_padding_after_the_rest_of_the_token_is_used_and_punctuation_is_not_misr
     ] == []
     a, b = res.text.splitlines()
     assert a.index("value") == b.index("value")
+
+
+def test_link_whose_text_is_a_code_span_is_still_one_link() -> None:
+    stats = LinkStats()
+    out = rewrite_links(
+        "see [`kubernetes/`](https://git.hollowbrook.internal/ops/infra/tree/main/kubernetes) "
+        "and [`notes`](../hollowbrook-notes.md)",
+        ctx(),
+        stats,
+    )
+    assert out == "see `kubernetes/` and [`notes`](../example-org-notes.md)"
+    assert (stats.private, stats.internal) == (1, 1)
+
+
+def test_every_value_on_an_aligned_code_line_is_substituted() -> None:
+    """A replacement's neighbours on the same line must still be substituted themselves."""
+    block = (
+        "key: hb-prd-west/hollowbrook-app/env    # Hollowbrook secret path\n"
+        "│   ├── hollowbrook-hollowbrook-ams.job   # Brackenfold zone\n"
+    )
+    out = HB.apply(block, code=True).text
+    assert "ollowbrook" not in out and "Brackenfold" not in out
+    a, b = block.splitlines(), out.splitlines()
+    assert a[0].index("#") == b[0].index("#")

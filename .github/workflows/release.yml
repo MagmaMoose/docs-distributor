@@ -62,14 +62,19 @@ jobs:
       # so it stays off until we actually want to block on severity. The scan that
       # matters is on the release step below, against the image that ships.
       - if: github.event_name == 'pull_request' && steps.detect.outputs.image_name != ''
-        uses: magmamoose/diatreme@5fdaad2a5e1efc4045376864613721001d53fa1a # v2.13.0
+        uses: magmamoose/diatreme@415b19df7d00e776bf2b08bfe72823df8a1c6f23 # v2.16.0
         with:
           mode: ci
           image_name: ${{ steps.detect.outputs.image_name }}
       # Default-branch push (or manual dispatch): version + release.
       #
-      # v2.13.0 IS THE FLOOR. Three fixes below it, each the difference between
-      # this working and looking like it works:
+      # v2.16.0 IS THE FLOOR. It is the first release with the helm extras that
+      # admin's `helm_chart_path` renders into this step (MagmaMoose/diatreme#194);
+      # an older Diatreme warns "Unexpected input" for each of them and publishes
+      # an unsigned, unlinted chart whose appVersion names an image tag nobody
+      # pushed.
+      # Three older fixes, each the difference between this working and looking
+      # like it works:
       #   v2.13.0 (MagmaMoose/diatreme#177) — every image upload carries a
       #     `repo:<name>` tag. An image project is named after the IMAGE, and a
       #     repo may build several (dunmir -> dunmir-agent, -backend, -frontend),
@@ -115,7 +120,7 @@ jobs:
       # engagement per scan type, which is DefectDojo's own data model.
       - id: release
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: magmamoose/diatreme@5fdaad2a5e1efc4045376864613721001d53fa1a # v2.13.0
+        uses: magmamoose/diatreme@415b19df7d00e776bf2b08bfe72823df8a1c6f23 # v2.16.0
         with:
           mode: release
           versioning-tool: gitversion
@@ -133,6 +138,23 @@ jobs:
           defectdojo-api-key: ${{ secrets.MM_DEFECTDOJO_API_KEY }}
           defectdojo-product-name: ${{ github.event.repository.name }}
           defectdojo-product-type: 'Research and Development'
+          # Helm chart publishing, switched on for this repo by `helm_chart_path` in
+          # MagmaMoose/admin. A new GHCR chart package starts PRIVATE: make it public
+          # after the first release, or Artifact Hub lists a repository with nothing
+          # in it (the run warns). The listing is skipped while the
+          # MM_ARTIFACTHUB_API_KEY_* secrets are unset; artifacthub-repo.yml is
+          # pushed once the repo has one, carrying the repositoryID the first
+          # listing reports.
+          publish-package: 'true'
+          package-ecosystem: helm
+          package-path: charts/docs-distributor
+          helm-app-version: tag
+          helm-lint: 'true'
+          helm-sign: 'true'
+          artifacthub-repo-file: ${{ hashFiles('artifacthub-repo.yml') != '' && 'artifacthub-repo.yml' || '' }}
+          artifacthub-api-key-id: ${{ secrets.MM_ARTIFACTHUB_API_KEY_ID }}
+          artifacthub-api-key-secret: ${{ secrets.MM_ARTIFACTHUB_API_KEY_SECRET }}
+          artifacthub-org: ${{ vars.MM_ARTIFACTHUB_ORG }}
       # Keep the floating major tag (v1, v2, ...) on the newest stable release, so
       # `uses: owner/repo@v2` means something. Nothing moved it before: chargate's
       # `v2` was set once and sat on v2.11.1 while the repo shipped v2.11.28, and

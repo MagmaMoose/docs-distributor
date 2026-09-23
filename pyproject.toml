@@ -94,4 +94,7 @@ dev = [
     "mypy",
     "respx>=0.22",
     "types-PyYAML",
+    # The acceptance suite runs a real `mkdocs build --strict` on the fixture docs repo,
+    # which uses MkDocs' own theme, so core MkDocs is all it needs.
+    "mkdocs==1.6.1",
 ]

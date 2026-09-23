@@ -1,0 +1,25 @@
+# SYNTHETIC. Every "real" value in this mapping is invented for the test suite: there is
+# no Hollowbrook, no Brackenfold and no Zuidmeer. It exists so the tests can exercise the
+# private-mapping code paths without a private mapping.
+version: 1
+rules:
+  - {from: Hollowbrook Logistics, to: the platform owner, class: org, case: preserve}
+  - {from: Hollowbrook, to: example-org, class: org}
+  - {from: hollowbrook.nl, to: example.com, class: domain}
+  - {from: git.hollowbrook.internal, to: git.example.com, class: host}
+  - {from: hb-prd-west, to: cluster-prd, class: cluster}
+  - {from: hb-acc, to: cluster-acceptance, class: cluster}
+  - {from: HB platform, to: the platform, class: product}
+  - {from: Brackenfold, to: vendor-C, class: vendor}
+  - {from: Zuidmeer, to: client-j, class: customer}
+  - {from: Jan de Vries, to: engineer-e, class: person}
+  - {from: jan.devries@hollowbrook.nl, to: platform-lead@example.com, class: email}
+  - {from: 7c1e4b9a-3f2d-4e8b-9a6c-5d2f1e0b8a47, to: aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa, class: subscription}
+  - {from: 93.184.216.34, to: 203.0.113.10, class: ip}
+  - {from: Chargewall, to: Security Gate, class: product}
+sources:
+  hollow-cloud:
+    url: https://git.hollowbrook.internal/ops/cloud-infra.git
+    drop: ["scratch/**"]
+links:
+  private_hosts: [git.hollowbrook.internal]

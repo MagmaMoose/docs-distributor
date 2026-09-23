@@ -517,6 +517,7 @@ verify = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mkdocs" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -540,6 +541,7 @@ provides-extras = ["verify"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mkdocs", specifier = "==1.6.1" },
     { name = "mypy" },
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-cov", specifier = ">=6" },

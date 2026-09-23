@@ -701,8 +701,11 @@ def repair_acceptable(before: str, after: str, placeholders: Sequence[str]) -> b
     for x, y in zip(a_lines, b_lines, strict=True):
         if _LINE_PREFIX.match(x).group(0) != _LINE_PREFIX.match(y).group(0):  # type: ignore[union-attr]
             return False
+    # Case-insensitive: "the platform owner" may rightly become "The platform owner" at the
+    # start of a sentence, and a repair that fixes that must not be refused for it.
+    low_before, low_after = before.casefold(), after.casefold()
     for p in placeholders:
-        if before.count(p) and not after.count(p):
+        if low_before.count(p.casefold()) and not low_after.count(p.casefold()):
             return False
     tokens_before = {t.casefold() for t in re.findall(r"[\w'-]+", before)}
     added = {t.casefold() for t in re.findall(r"[\w'-]+", after)} - tokens_before - _FUNCTION_WORDS

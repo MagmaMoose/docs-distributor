@@ -127,6 +127,24 @@ entries:
   - {class: domain, value: pagerduty.com, why: "PagerDuty docs and API"}
   - {class: domain, value: sonarcloud.io, why: "SonarCloud"}
   - {class: domain, value: sonarsource.com, why: "SonarQube docs"}
+  - {class: domain, value: mailgun.net, why: "Mailgun API endpoints"}
+  - {class: domain, value: mailgun.org, why: "Mailgun EU endpoints"}
+  - {class: domain, value: jetstack.io, why: "Jetstack (cert-manager) Helm repository"}
+  - {class: domain, value: nodesource.com, why: "NodeSource package repository"}
+  - {class: domain, value: alpinelinux.org, why: "Alpine Linux package CDN"}
+  - {class: domain, value: fluentbit.io, why: "Fluent Bit docs"}
+  - {class: domain, value: elastic.co, why: "Elastic docs"}
+  - {class: domain, value: europa.eu, why: "EU publications (EUR-Lex)"}
+  - {class: domain, value: gitversion.net, why: "GitVersion docs"}
+  - {class: domain, value: fairwinds.com, why: "Fairwinds projects (Goldilocks) and their annotations"}
+  - {class: domain, value: stakater.com, why: "Stakater Reloader annotations"}
+  - {class: domain, value: healthchecks.io, why: "Healthchecks.io uptime service"}
+  - {class: domain, value: holmesgpt.dev, why: "HolmesGPT docs"}
+  - {class: domain, value: kured.dev, why: "kured docs"}
+  - {class: domain, value: nvie.com, why: "the git-flow branching model article"}
+  - {class: domain, value: one.one.one.one, subdomains: false, why: "Cloudflare's public resolver hostname"}
+  - {class: domain, value: tls.ca, subdomains: false, why: "the ca.crt key of a Kubernetes TLS secret, written as tls.ca; not a host"}
+  - {class: domain, value: node.id, subdomains: false, why: "a Kafka broker property; not a host"}
   - {class: domain, value: artifacthub.io, why: "Artifact Hub, including its artifacthub.io/* chart annotations"}
   - {class: domain, value: aws.com, why: "AWS-owned; CSI driver names such as ebs.csi.aws.com"}
   - {class: domain, value: ecr.aws, why: "Amazon ECR Public registry (public.ecr.aws)"}
@@ -168,3 +186,5 @@ entries:
   - {class: email, value: git@gitlab.com, why: "GitLab SSH remote user"}
   - {class: email, value: noreply@github.com, why: "GitHub system sender"}
   - {class: email, value: actions@users.noreply.github.com, why: "GitHub Actions bot identity"}
+  - {class: email, value: sk-ssh-ed25519@openssh.com, why: "an SSH key type name (FIDO), not a mailbox"}
+  - {class: email, pattern: '[^@\s]+@([a-z0-9-]+\.)+svc\.cluster\.local', why: "in-cluster service addresses (Kafka listeners, principals), not mailboxes"}

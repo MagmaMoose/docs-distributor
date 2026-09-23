@@ -433,152 +433,49 @@ _CODE_ROOTS = frozenset(
     ]
 )
 
-# Two-letter endings that are file extensions far more often than country domains. A real
-# domain on one of these is still caught by the literal layer when it is in the mapping.
+# Country-code TLDs (ISO 3166-1 alpha-2 plus ac, eu, su and uk), minus the few that are file
+# extensions far more often than domains. A real domain on one of those is still caught by
+# the literal layer when it is in the mapping.
 _EXTENSION_TLDS = frozenset(
-    [
-        "md",
-        "py",
-        "sh",
-        "tf",
-        "rs",
-        "pl",
-        "ps",
-        "cs",
-        "rb",
-        "js",
-        "ts",
-        "go",
-        "cc",
-        "hs",
-        "ml",
-        "mk",
-        "in",
-        "db",
-        "so",
-        "gz",
-        "xz",
-        "bz",
-        "ac",
-        "am",
-        "sv",
-        "vb",
-        "fs",
-        "el",
-        "lo",
-        "la",
-        "pm",
-        "cm",
-        "ex",
-    ]
+    "md py sh tf rs pl ps cs rb cc ml mk in so bz ac am sv la pm cm".split()
+)
+_COUNTRY_TLDS = (
+    frozenset(
+        "ad ae af ag ai al am ao aq ar as at au aw ax az ba bb bd be bf bg bh bi bj bm bn bo br bs "
+        "bt bw by bz ca cc cd cf cg ch ci ck cl cm cn co cr cu cv cw cx cy cz de dj dk dm do dz ec "
+        "ee eg er es et fi fj fk fm fo fr ga gd ge gf gg gh gi gl gm gn gp gq gr gs gt gu gw gy hk "
+        "hm hn hr ht hu id ie il im in io iq ir is it je jm jo jp ke kg kh ki km kn kp kr kw ky kz "
+        "la lb lc li lk lr ls lt lu lv ly ma mc md me mg mh mk ml mm mn mo mp mq mr ms mt mu mv mw "
+        "mx my mz na nc ne nf ng ni nl no np nr nu nz om pa pe pf pg ph pk pl pm pn pr ps pt pw py "
+        "qa re ro rs ru rw sa sb sc sd se sg sh si sk sl sm sn so sr ss st sv sx sy sz tc td tf tg "
+        "th tj tk tl tm tn to tr tt tv tw tz ua ug us uy uz va vc ve vg vi vn vu wf ws ye yt za zm "
+        "zw ac eu su uk".split()
+    )
+    - _EXTENSION_TLDS
 )
 
-# Generic and geographic TLDs an organisation registers. Every two-letter label is also
-# treated as a country code (minus the extensions above), which is where most leaks live.
+# Generic and geographic TLDs an organisation registers.
 _GENERIC_TLDS = frozenset(
-    [
-        "com",
-        "net",
-        "org",
-        "info",
-        "biz",
-        "edu",
-        "gov",
-        "mil",
-        "int",
-        "aero",
-        "asia",
-        "coop",
-        "jobs",
-        "mobi",
-        "museum",
-        "pro",
-        "tel",
-        "travel",
-        "app",
-        "dev",
-        "page",
-        "cloud",
-        "tech",
-        "online",
-        "site",
-        "website",
-        "store",
-        "shop",
-        "blog",
-        "xyz",
-        "top",
-        "club",
-        "vip",
-        "live",
-        "news",
-        "link",
-        "life",
-        "world",
-        "today",
-        "email",
-        "digital",
-        "systems",
-        "services",
-        "solutions",
-        "software",
-        "technology",
-        "tools",
-        "agency",
-        "company",
-        "consulting",
-        "group",
-        "global",
-        "media",
-        "studio",
-        "design",
-        "space",
-        "zone",
-        "security",
-        "support",
-        "team",
-        "works",
-        "host",
-        "hosting",
-        "icu",
-        "one",
-        "global",
-        "amsterdam",
-        "frl",
-        "brussels",
-        "vlaanderen",
-        "gent",
-        "berlin",
-        "hamburg",
-        "koeln",
-        "london",
-        "paris",
-        "wien",
-        "nyc",
-        "tokyo",
-        "microsoft",
-        "azure",
-        "google",
-        "amazon",
-        "aws",
-    ]
+    "com net org info biz edu gov mil int aero asia coop jobs mobi museum pro tel travel "
+    "app dev page cloud tech online site website store shop blog xyz top club vip live news "
+    "link life world today email digital systems services solutions software "
+    "technology tools agency company consulting group global media studio design space zone "
+    "security support team works host hosting icu one amsterdam frl brussels "
+    "vlaanderen gent berlin hamburg koeln london paris wien nyc tokyo microsoft azure google "
+    "amazon aws".split()
 )
 
 
 def _is_tld(label: str) -> bool:
     if not label.isascii() or not label.isalpha() or label != label.lower():
         return False
-    if len(label) == 2:
-        return label not in _EXTENSION_TLDS
-    return label in _GENERIC_TLDS
+    return label in _COUNTRY_TLDS or label in _GENERIC_TLDS
 
 
-# A host is not followed by ".<more>": "environments.dev.account_id" is a key path in HCL,
-# not the domain environments.dev. A sentence-ending full stop is still fine.
 _HOST = re.compile(
-    r"(?<![A-Za-z0-9._%+@-])"
+    r"(?<![A-Za-z0-9._%+@{-])"
     r"((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63})"
-    r"(?![A-Za-z0-9_-])(?!\.[A-Za-z0-9_])"
+    r"(?![A-Za-z0-9_=-])(?!\.[A-Za-z0-9_])"
 )
 
 

@@ -355,6 +355,17 @@ def parse_mapping(documents: Sequence[tuple[str, Any]], vocabulary: Vocabulary) 
             str(h).lower() for h in _as_list((data.get("links") or {}).get("private_hosts"))
         )
         allow_items.extend(_as_list(data.get("allow")))
+        # The compact form for a reviewed list: one justification for many terms, so an
+        # onboarding review fits in a secret store's size limit.
+        terms = data.get("allow_terms")
+        if terms is not None:
+            if not isinstance(terms, dict) or not str(terms.get("why", "")).strip():
+                problems.append(f"{source_name}: allow_terms needs `why` and `values`")
+            else:
+                allow_items.extend(
+                    {"class": "term", "value": str(v), "why": str(terms["why"])}
+                    for v in _as_list(terms.get("values"))
+                )
         for i, item in enumerate(_as_list(data.get("deny"))):
             if not isinstance(item, dict) or not item.get("value") or not item.get("why"):
                 problems.append(f"{source_name}: deny {i + 1}: needs `value` and `why`")

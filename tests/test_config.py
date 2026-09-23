@@ -172,3 +172,10 @@ def test_short_real_value_inside_a_longer_placeholder_word_is_fine() -> None:
         {"from": "HB", "to": "Example", "class": "org", "case": "exact"},
         {"from": "Jan de Vries", "to": "sample", "class": "person"},
     )
+
+
+def test_allow_terms_compact_form() -> None:
+    m = mapping(allow_terms={"why": "reviewed at onboarding", "values": ["Kubescape", "qahub"]})
+    assert {"kubescape", "qahub"} <= m.allow.terms
+    with pytest.raises(config.ConfigError):
+        mapping(allow_terms={"values": ["x"]})

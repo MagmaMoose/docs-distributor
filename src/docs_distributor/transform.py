@@ -25,6 +25,7 @@ Per Markdown file, in order:
 
 from __future__ import annotations
 
+import bisect
 import hashlib
 import posixpath
 import re
@@ -33,11 +34,19 @@ from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
+from typing import Any, Protocol
 from urllib.parse import urlsplit
 
+from docs_distributor.audit import _TRUNCATION, MIN_TRUNCATION
 from docs_distributor.config import MappingRule
 
 # --- substitution ------------------------------------------------------------------------
+
+
+class _Finder(Protocol):
+    """Anything with a ``finditer`` over text: a compiled pattern, or the truncation finder."""
+
+    def finditer(self, text: str, /) -> Iterable[Any]: ...
 
 
 @dataclass(frozen=True)
@@ -97,6 +106,11 @@ class Substituter:
                 self._by_key.setdefault(" ".join(value.split()).casefold(), rule)
                 alternatives.append(f"(?i:{body})")
         self._literal = re.compile("|".join(alternatives)) if alternatives else None
+        # For truncations: every real value long enough to be cut short, casefolded.
+        self._prefix_rule = {
+            v.casefold(): r for v, r in literals if len(v) > MIN_TRUNCATION and "\n" not in v
+        }
+        self._prefix_keys = sorted(self._prefix_rule)
 
     def _rule_for(self, matched: str) -> MappingRule | None:
         key = " ".join(matched.split())
@@ -115,7 +129,23 @@ class Substituter:
             text = self._sub(
                 self._literal, text, lambda m: self._rule_for(m.group(0)), replacements
             )
+        if self._prefix_keys:
+            text = self._sub(_Truncations(self), text, lambda m: m.rule, replacements)
         return Substituted(text, replacements, [])
+
+    def truncation_at(self, token: str) -> tuple[int, int, MappingRule] | None:
+        """Where ``token`` (the text before an ellipsis) ends in a prefix of a real value:
+        (start, end) within the token, and the rule. The same test the gate applies."""
+        starts = [0] + [i + 1 for i, ch in enumerate(token) if not ch.isalnum()]
+        for start in starts:
+            cand = token[start:].rstrip("-._:/")
+            key = cand.casefold()
+            if len(key) < MIN_TRUNCATION:
+                continue
+            i = bisect.bisect_left(self._prefix_keys, key)
+            if i < len(self._prefix_keys) and self._prefix_keys[i].startswith(key):
+                return start, start + len(cand), self._prefix_rule[self._prefix_keys[i]]
+        return None
 
     def _substitute_aligned(self, text: str) -> Substituted:
         """Code, line by line. Each line is split into cells at its alignment gaps (two or
@@ -172,7 +202,7 @@ class Substituter:
 
     @staticmethod
     def _sub(
-        rx: re.Pattern[str],
+        rx: _Finder,
         text: str,
         pick: object,
         replacements: list[Replacement],
@@ -214,6 +244,46 @@ class Substituter:
             )
         replacements.sort(key=lambda r: r.start)
         return "".join(out)
+
+
+class _Span:
+    def __init__(self, text: str, start: int, end: int, rule: MappingRule) -> None:
+        self._text, self._start, self._end = text, start, end
+        # A cut-short value becomes its placeholder cut to the same length: 1a2b3c4d…
+        # becomes aaaaaaaa…, so the prose keeps its shape and the ellipsis still reads.
+        self.rule = MappingRule(
+            index=rule.index,
+            source=rule.source,
+            target=rule.target[: end - start] or rule.target,
+            cls=rule.cls,
+            case="exact",
+        )
+
+    def start(self) -> int:
+        return self._start
+
+    def end(self) -> int:
+        return self._end
+
+    def group(self, _: int = 0) -> str:
+        return self._text[self._start : self._end]
+
+
+class _Truncations:
+    """A finder with the ``finditer`` shape :meth:`Substituter._sub` expects."""
+
+    def __init__(self, sub: Substituter) -> None:
+        self.sub = sub
+
+    def finditer(self, text: str) -> list[_Span]:
+        found: list[_Span] = []
+        for m in _TRUNCATION.finditer(text):
+            hit = self.sub.truncation_at(m.group("tok"))
+            if hit is not None:
+                start, end, rule = hit
+                base = m.start("tok")
+                found.append(_Span(text, base + start, base + end, rule))
+        return found
 
 
 # The gaps that align a line of code: two or more spaces, or the single space that sits

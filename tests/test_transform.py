@@ -318,3 +318,16 @@ def test_every_value_on_an_aligned_code_line_is_substituted() -> None:
     assert "ollowbrook" not in out and "Brackenfold" not in out
     a, b = block.splitlines(), out.splitlines()
     assert a[0].index("#") == b[0].index("#")
+
+
+def test_a_truncated_real_value_becomes_its_truncated_placeholder() -> None:
+    s = subst(
+        {
+            "from": "7c1e4b9a-3f2d-4e8b-9a6c-5d2f1e0b8a47",
+            "to": "aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa",
+            "class": "subscription",
+        }
+    )
+    assert s.apply("the hub (7c1e4b9a…) and spoke").text == "the hub (aaaaaaaa…) and spoke"
+    out = s.apply("├── prod/    # subscription (7c1e4b9a…)\n", code=True).text
+    assert "7c1e4b9a" not in out and "aaaaaaaa…" in out

@@ -183,7 +183,7 @@ def _mid_sentence(line: str, start: int) -> bool:
         return False
     prev = before.rstrip(" ")
     m = re.search(r"([A-Za-z][A-Za-z0-9'-]*)$", prev)
-    return bool(m) and m.group(1)[0].islower()
+    return m is not None and m.group(1)[0].islower()
 
 
 def scan(

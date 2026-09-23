@@ -472,7 +472,11 @@ class LLM:
             wanted = {c.term: c for c in batch}
             for item in _results(answer, "results"):
                 term = item.get("term")
-                if term not in wanted or not isinstance(item.get("sensitive"), bool):
+                if (
+                    not isinstance(term, str)
+                    or term not in wanted
+                    or not isinstance(item.get("sensitive"), bool)
+                ):
                     self.stats.rejected += 1
                     continue
                 record = {
@@ -539,7 +543,7 @@ class LLM:
             except LLMError:
                 answer = {}
             for item in _results(answer, "proposals"):
-                term = item.get("term")
+                term = str(item.get("term", ""))
                 to = str(item.get("to", "")).strip()
                 cls = str(item.get("class", "other"))
                 if (
@@ -626,7 +630,7 @@ class LLM:
         except LLMError:
             return out
         for item in _results(answer, "placements"):
-            path = item.get("path")
+            path = str(item.get("path", ""))
             section = tuple(str(s) for s in item.get("section") or ())
             title = str(item.get("title", "")).strip()
             if path not in pending or section not in sections or not (0 < len(title) <= 60):

@@ -137,7 +137,7 @@ def _value_allowed(cls: str, entry: AllowEntry, value: str) -> bool:
         return host == want or (entry.subdomains and host.endswith("." + want))
     if cls in ("ipv4-public", "ipv6-public"):
         try:
-            return ipaddress.ip_network(value, strict=False).subnet_of(  # type: ignore[arg-type]
+            return ipaddress.ip_network(value, strict=False).subnet_of(
                 ipaddress.ip_network(allowed, strict=False)  # type: ignore[arg-type]
             )
         except (ValueError, TypeError):

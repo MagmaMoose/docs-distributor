@@ -12,14 +12,16 @@ import argparse
 import os
 import sys
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+
+import yaml
 
 from docs_distributor import __version__, audit, config, pipeline, report
 from docs_distributor.config import ConfigError, SourceConfig, SourcePrivate
 from docs_distributor.github import GitHub, GitHubError, token_for
-from docs_distributor.llm import LLM, Cache, ReplayBackend, make_backend
-from docs_distributor.novelty import Lexicon, load_tech_vocabulary, scan
+from docs_distributor.llm import LLM, Cache, Decision, Proposal, ReplayBackend, make_backend
+from docs_distributor.novelty import Candidate, Lexicon, load_tech_vocabulary, scan
 from docs_distributor.sources import SourceError, fetch, load_local
 from docs_distributor.transform import Substituter, transform_tree
 
@@ -250,8 +252,8 @@ def cmd_onboard(args: argparse.Namespace) -> int:
         placeholder_values=vocabulary.all_values() | {r.target for r in mapping.rules},
     )
     candidates = scan(md, lexicon)
-    decisions: dict[str, object] = {}
-    proposals = {}
+    decisions: dict[str, Decision] = {}
+    proposals: dict[str, Proposal] = {}
     if not args.offline:
         cfg = (
             config.load_config(Path(args.config))
@@ -269,7 +271,7 @@ def cmd_onboard(args: argparse.Namespace) -> int:
             (c.term, decisions[c.term.casefold()].category)
             for c in candidates
             if c.term.casefold() in decisions and decisions[c.term.casefold()].sensitive
-        ]  # type: ignore[attr-defined]
+        ]
         proposals = {
             p.term: p for p in llm.propose(sensitive, vocabulary, [r.target for r in mapping.rules])
         }
@@ -287,36 +289,32 @@ def cmd_onboard(args: argparse.Namespace) -> int:
 
 def write_onboarding(
     path: Path,
-    candidates: Sequence[object],
-    decisions: dict[str, object],
-    proposals: dict[str, object],
+    candidates: Sequence[Candidate],
+    decisions: Mapping[str, Decision],
+    proposals: Mapping[str, Proposal],
 ) -> None:
-    import yaml
-
-    rules, public, review = [], [], []
+    rules: list[dict[str, str]] = []
+    public: list[dict[str, str]] = []
+    review: list[dict[str, object]] = []
     for c in candidates:
-        term = c.term  # type: ignore[attr-defined]
-        d = decisions.get(term.casefold())
-        entry = {"term": term, "count": c.count, "where": c.where, "context": list(c.contexts)}  # type: ignore[attr-defined]
+        d = decisions.get(c.term.casefold())
         if d is None:
-            review.append(entry)
-        elif d.sensitive:  # type: ignore[attr-defined]
-            p = proposals.get(term)
+            review.append(
+                {"term": c.term, "count": c.count, "where": c.where, "context": list(c.contexts)}
+            )
+        elif d.sensitive:
+            p = proposals.get(c.term)
             rules.append(
                 {
-                    "from": term,
-                    "to": getattr(p, "to", "") or "TODO",
-                    "class": getattr(p, "cls", "other"),
+                    "from": c.term,
+                    "to": (p.to if p else "") or "TODO",
+                    "class": p.cls if p else "other",
                     "why": d.reason,
                 }
-            )  # type: ignore[attr-defined]
+            )
         else:
-            public.append({"term": term, "category": d.category, "why": d.reason})  # type: ignore[attr-defined]
-    doc = {
-        "rules": rules,
-        "judged_public": public,
-        "needs_review": review,
-    }
+            public.append({"term": c.term, "category": d.category, "why": d.reason})
+    doc = {"rules": rules, "judged_public": public, "needs_review": review}
     header = (
         "# PRIVATE: an onboarding proposal for docs-distributor. It names real terms.\n"
         "# Review it, move accepted `rules` into the mapping secret, add the public terms you\n"

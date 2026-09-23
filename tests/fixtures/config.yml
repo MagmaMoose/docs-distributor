@@ -1,0 +1,16 @@
+# Runtime config for the test suite; the chart renders the same shape from values.yaml.
+target:
+  repo: example-org/docs
+  base: main
+  branchPrefix: docs/sync-
+  navAfter: Platform
+  auth: {type: none}
+sources:
+  - name: hollow-cloud
+    title: Hollow Cloud
+    target: docs/hollow-cloud
+    ref: main
+    include: ["**/*.md", "**/*.png"]
+llm:
+  backend: replay
+  model: fake-model

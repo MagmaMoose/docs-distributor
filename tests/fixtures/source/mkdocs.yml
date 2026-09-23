@@ -1,0 +1,8 @@
+site_name: Hollowbrook Cloud Docs
+nav:
+  - Home: index.md
+  - Networking:
+      - Hollowbrook Network: networking/hollowbrook-network.md
+  - Operations:
+      - Runbook: operations/runbook.md
+      - Scratch: scratch/todo.md

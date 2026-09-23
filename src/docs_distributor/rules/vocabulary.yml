@@ -1,0 +1,80 @@
+# The placeholder vocabulary: the TARGET side of every mapping.
+#
+# This is the scheme the published corpus already uses. The first section was ported by
+# hand with exactly these stand-ins, so a pipeline that invented its own would leave the
+# corpus incoherent. Extend a series (client-j, vendor-C, engineer-e) rather than starting a
+# new one.
+#
+# Nothing in this file is a real value, and nothing ever may be: the audit treats every
+# value and shape here as fictional and waves it through.
+#
+#   values  exact stand-ins already in use
+#   series  how the next stand-in in a class is named ({letter} = a..z, then aa..az;
+#           {LETTER} = A..Z); the placeholder proposer extends these
+#   shapes  regexes (full match) for stand-ins that are fictional by construction
+#   audit   which audit pattern class the values and shapes exempt, when it is not the
+#           class name itself
+version: 1
+classes:
+  org:
+    values: [example-org]
+    series: example-org-{letter}
+    shapes: ['example-org(?:-[a-z]{1,2})?']
+  repo:
+    values: [platform-infra, platform-utils, cloud-infra]
+    shapes: ['[a-z0-9]+(?:-[a-z0-9]+)*']
+  domain:
+    audit: domain
+    values: [example.com, example.io, example.net, example.org, aws.example.net, az.example.net]
+  customer:
+    values: [client-a, client-b, client-c, client-d, client-e, client-f, client-g, client-h, client-i]
+    series: client-{letter}
+    shapes: ['client-[a-z]{1,2}(?:-site\d+)?']
+  person:
+    values:
+      - platform-lead@example.com
+      - network-lead@example.com
+      - ops-engineer@example.com
+      - systems@example.com
+      - technical@example.com
+    series: engineer-{letter}
+    shapes: ['engineer-[a-z]{1,2}', '[a-z0-9.-]+@example\.(?:com|net|org|io)']
+  handle:
+    values: [engineer-a, engineer-b, engineer-c, engineer-d]
+    series: engineer-{letter}
+    shapes: ['engineer-[a-z]{1,2}']
+  vendor:
+    values: [vendor-A, vendor-B]
+    series: vendor-{LETTER}
+    shapes: ['vendor-[A-Z]{1,2}']
+  product:
+    series: product-{LETTER}
+    shapes: ['product-[A-Z]{1,2}']
+  shared-tooling:
+    values: [Release Workflows, Security Gate, platform-bot]
+  aws-account:
+    audit: account-12
+    values: ['111122223333', '444455556666', '777788889999', '123456789012', '210987654321']
+    shapes: ['(\d)\1{11}']
+  uuid:
+    audit: uuid
+    values: ['11111111-2222-3333-4444-555555555555']
+    shapes:
+      # The middle groups 1111-2222-3333 mark a stand-in: a real v4 UUID carries a 4 in the
+      # third group, and nothing in practice generates version-2 UUIDs.
+      - '[0-9a-f]{8}-1111-2222-3333-[0-9a-f]{12}'
+      - '([0-9a-f])\1{7}-\1{4}-\1{4}-\1{4}-\1{12}'
+  hex-32:
+    audit: hex-32
+    shapes: ['([0-9a-f])\1{31}']
+  truncated-id:
+    audit: truncated-id
+    # aaaa1111…, bbbb2222…: two repeated runs are a stand-in by construction.
+    shapes: ['([0-9a-f])\1{3,}([0-9a-f])\2{3,}']
+  age-recipient:
+    audit: age-recipient
+    shapes: ['age1(?:example)+[a-z0-9]*']
+  ip:
+    # RFC 5737 and RFC 3849. The audit always treats these as fictional; they are listed
+    # so the placeholder proposer draws from them.
+    ranges: [192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, 2001:db8::/32]

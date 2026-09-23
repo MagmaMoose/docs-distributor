@@ -1,0 +1,190 @@
+# Verified-public values the pattern-class audit (layer 2) lets through, and public terms
+# the novelty scan does not need to ask about.
+#
+# Every entry carries a `why` that a reviewer can check without trusting whoever added it:
+# name the public source. Nothing here may be specific to one source organisation; a value
+# that is public but would hint at WHICH organisation a corpus came from (a regulator, a
+# national standard, a customer's vendor) belongs in that source's private mapping instead.
+#
+#   class    the audit class the entry exempts (see PATTERN_CLASSES in audit.py), or `term`
+#            for the novelty scan
+#   value    literal, case-insensitive. Domains cover their subdomains unless
+#            `subdomains: false`; addresses may be CIDRs.
+#   pattern  regex the whole match must satisfy
+#   context  regex searched in the line around the match
+#   paths    optional globs limiting where the entry applies
+#
+# A domain entry exempts the domain, not the labels in front of it: a storage account in
+# <name>.blob.core.windows.net or a bucket in <name>.s3.amazonaws.com is still covered by
+# the literal and novelty layers.
+version: 1
+entries:
+  # --- domains: code hosting and registries ---------------------------------------------
+  - {class: domain, value: github.com, why: "GitHub"}
+  - {class: domain, value: githubusercontent.com, why: "GitHub raw content and avatars"}
+  - {class: domain, value: github.io, why: "GitHub Pages; the label in front is a public project"}
+  - {class: domain, value: githubassets.com, why: "GitHub static assets"}
+  - {class: domain, value: ghcr.io, why: "GitHub Container Registry"}
+  - {class: domain, value: docker.io, why: "Docker Hub registry"}
+  - {class: domain, value: docker.com, why: "Docker documentation and Hub"}
+  - {class: domain, value: quay.io, why: "Red Hat Quay public registry"}
+  - {class: domain, value: gcr.io, why: "Google Container Registry (public images such as distroless)"}
+  - {class: domain, value: registry.k8s.io, why: "Kubernetes image registry"}
+  - {class: domain, value: pypi.org, why: "Python Package Index"}
+  - {class: domain, value: npmjs.com, why: "npm registry"}
+  - {class: domain, value: npmjs.org, why: "npm registry"}
+  # --- domains: projects the platforms are built from -----------------------------------
+  - {class: domain, value: kubernetes.io, why: "Kubernetes: docs and API groups such as app.kubernetes.io"}
+  - {class: domain, value: k8s.io, why: "Kubernetes API groups (networking.k8s.io, ...)"}
+  - {class: domain, value: x-k8s.io, why: "Kubernetes SIG API groups (gateway.networking.x-k8s.io)"}
+  - {class: domain, value: helm.sh, why: "Helm docs and chart annotations (helm.sh/hook)"}
+  - {class: domain, value: fluxcd.io, why: "Flux docs and API groups"}
+  - {class: domain, value: kustomize.io, why: "Kustomize docs"}
+  - {class: domain, value: cert-manager.io, why: "cert-manager docs and API group"}
+  - {class: domain, value: external-secrets.io, why: "External Secrets Operator docs and API group"}
+  - {class: domain, value: cnpg.io, why: "CloudNativePG API group"}
+  - {class: domain, value: cloudnative-pg.io, why: "CloudNativePG docs"}
+  - {class: domain, value: longhorn.io, why: "Longhorn docs and API group"}
+  - {class: domain, value: traefik.io, why: "Traefik docs and API group"}
+  - {class: domain, value: containo.us, why: "Traefik legacy API group (traefik.containo.us)"}
+  - {class: domain, value: kyverno.io, why: "Kyverno docs and API group"}
+  - {class: domain, value: k3s.io, why: "K3s docs"}
+  - {class: domain, value: rancher.io, why: "Rancher projects (K3s, local-path, system-upgrade-controller)"}
+  - {class: domain, value: cattle.io, why: "Rancher API groups (upgrade.cattle.io)"}
+  - {class: domain, value: velero.io, why: "Velero docs and API group"}
+  - {class: domain, value: prometheus.io, why: "Prometheus docs and annotations"}
+  - {class: domain, value: coreos.com, why: "Prometheus Operator API group (monitoring.coreos.com)"}
+  - {class: domain, value: grafana.com, why: "Grafana docs"}
+  - {class: domain, value: istio.io, why: "Istio docs and API groups"}
+  - {class: domain, value: keycloak.org, why: "Keycloak docs"}
+  - {class: domain, value: dexidp.io, why: "Dex docs"}
+  - {class: domain, value: headlamp.dev, why: "Headlamp docs"}
+  - {class: domain, value: min.io, why: "MinIO docs"}
+  - {class: domain, value: strimzi.io, why: "Strimzi (Kafka on Kubernetes) docs and API group"}
+  - {class: domain, value: apache.org, why: "Apache projects (Kafka, ...)"}
+  - {class: domain, value: postgresql.org, why: "PostgreSQL docs"}
+  - {class: domain, value: redis.io, why: "Redis docs"}
+  - {class: domain, value: valkey.io, why: "Valkey docs"}
+  - {class: domain, value: nginx.org, why: "NGINX docs"}
+  - {class: domain, value: terraform.io, why: "Terraform registry and docs"}
+  - {class: domain, value: hashicorp.com, why: "HashiCorp docs (Terraform, Vault, Nomad)"}
+  - {class: domain, value: opentofu.org, why: "OpenTofu docs and registry"}
+  - {class: domain, value: gruntwork.io, why: "Terragrunt docs"}
+  - {class: domain, value: ansible.com, why: "Ansible docs"}
+  - {class: domain, value: getsops.io, why: "SOPS docs"}
+  - {class: domain, value: age-encryption.org, why: "age docs"}
+  - {class: domain, value: sigstore.dev, why: "Sigstore / cosign docs"}
+  - {class: domain, value: trivy.dev, why: "Trivy docs"}
+  - {class: domain, value: aquasec.com, why: "Trivy / Aqua docs"}
+  - {class: domain, value: kics.io, why: "KICS docs"}
+  - {class: domain, value: checkov.io, why: "Checkov docs"}
+  - {class: domain, value: renovatebot.com, why: "Renovate docs"}
+  - {class: domain, value: python.org, why: "Python docs"}
+  - {class: domain, value: nodejs.org, why: "Node.js docs"}
+  - {class: domain, value: go.dev, why: "Go docs"}
+  - {class: domain, value: mkdocs.org, why: "MkDocs docs"}
+  - {class: domain, value: readthedocs.io, why: "Read the Docs hosted project docs"}
+  - {class: domain, value: shields.io, why: "README badges"}
+  - {class: domain, value: semver.org, why: "Semantic Versioning spec"}
+  - {class: domain, value: conventionalcommits.org, why: "Conventional Commits spec"}
+  - {class: domain, value: keepachangelog.com, why: "Keep a Changelog spec"}
+  - {class: domain, value: yaml.org, why: "YAML spec"}
+  - {class: domain, value: json-schema.org, why: "JSON Schema spec"}
+  - {class: domain, value: openid.net, why: "OpenID specs"}
+  - {class: domain, value: oauth.net, why: "OAuth specs"}
+  - {class: domain, value: letsencrypt.org, why: "Let's Encrypt ACME endpoints and docs"}
+  - {class: domain, value: ietf.org, why: "IETF RFCs"}
+  - {class: domain, value: rfc-editor.org, why: "RFCs"}
+  - {class: domain, value: iana.org, why: "IANA registries"}
+  - {class: domain, value: w3.org, why: "W3C specs"}
+  - {class: domain, value: owasp.org, why: "OWASP"}
+  - {class: domain, value: cisecurity.org, why: "CIS benchmarks"}
+  - {class: domain, value: nist.gov, why: "NIST publications"}
+  - {class: domain, value: anthropic.com, why: "Anthropic docs and API"}
+  - {class: domain, value: claude.com, why: "Claude Code docs"}
+  - {class: domain, value: claude.ai, why: "Claude"}
+  - {class: domain, value: litellm.ai, why: "LiteLLM docs"}
+  - {class: domain, value: openai.com, why: "OpenAI docs and API"}
+  # --- domains: clouds and SaaS endpoints ----------------------------------------------
+  - {class: domain, value: amazonaws.com, why: "AWS service endpoints; resource names in front are covered by layers 1 and 3"}
+  - {class: domain, value: amazon.com, why: "AWS docs and console"}
+  - {class: domain, value: aws.dev, why: "AWS docs"}
+  - {class: domain, value: microsoft.com, why: "Microsoft docs"}
+  - {class: domain, value: microsoftonline.com, why: "Entra ID login endpoint; a tenant ID in the path is caught by the uuid class"}
+  - {class: domain, value: azure.com, why: "Azure portal, docs and service endpoints"}
+  - {class: domain, value: azure.net, why: "Azure service endpoints (vault.azure.net); the vault name in front is covered by layers 1 and 3"}
+  - {class: domain, value: windows.net, why: "Azure Storage endpoints; the account name in front is covered by layers 1 and 3"}
+  - {class: domain, value: azurecr.io, why: "Azure Container Registry endpoints; the registry name in front is covered by layers 1 and 3"}
+  - {class: domain, value: azurewebsites.net, why: "Azure App Service endpoints; the app name in front is covered by layers 1 and 3"}
+  - {class: domain, value: visualstudio.com, why: "Azure DevOps legacy endpoints"}
+  - {class: domain, value: google.com, why: "Google docs and endpoints"}
+  - {class: domain, value: googleapis.com, why: "Google API endpoints"}
+  - {class: domain, value: oraclecloud.com, why: "OCI endpoints"}
+  - {class: domain, value: oracle.com, why: "OCI docs"}
+  - {class: domain, value: cloudflare.com, why: "Cloudflare docs and API"}
+  - {class: domain, value: cloudflare-dns.com, why: "Cloudflare DoH resolver"}
+  - {class: domain, value: slack.com, why: "Slack docs and API (webhook URLs are a separate class)"}
+  - {class: domain, value: pagerduty.com, why: "PagerDuty docs and API"}
+  - {class: domain, value: sonarcloud.io, why: "SonarCloud"}
+  - {class: domain, value: sonarsource.com, why: "SonarQube docs"}
+  - {class: domain, value: mailgun.net, why: "Mailgun API endpoints"}
+  - {class: domain, value: mailgun.org, why: "Mailgun EU endpoints"}
+  - {class: domain, value: jetstack.io, why: "Jetstack (cert-manager) Helm repository"}
+  - {class: domain, value: nodesource.com, why: "NodeSource package repository"}
+  - {class: domain, value: alpinelinux.org, why: "Alpine Linux package CDN"}
+  - {class: domain, value: fluentbit.io, why: "Fluent Bit docs"}
+  - {class: domain, value: elastic.co, why: "Elastic docs"}
+  - {class: domain, value: europa.eu, why: "EU publications (EUR-Lex)"}
+  - {class: domain, value: gitversion.net, why: "GitVersion docs"}
+  - {class: domain, value: fairwinds.com, why: "Fairwinds projects (Goldilocks) and their annotations"}
+  - {class: domain, value: stakater.com, why: "Stakater Reloader annotations"}
+  - {class: domain, value: healthchecks.io, why: "Healthchecks.io uptime service"}
+  - {class: domain, value: holmesgpt.dev, why: "HolmesGPT docs"}
+  - {class: domain, value: kured.dev, why: "kured docs"}
+  - {class: domain, value: nvie.com, why: "the git-flow branching model article"}
+  - {class: domain, value: one.one.one.one, subdomains: false, why: "Cloudflare's public resolver hostname"}
+  - {class: domain, value: tls.ca, subdomains: false, why: "the ca.crt key of a Kubernetes TLS secret, written as tls.ca; not a host"}
+  - {class: domain, value: node.id, subdomains: false, why: "a Kafka broker property; not a host"}
+  - {class: domain, value: artifacthub.io, why: "Artifact Hub, including its artifacthub.io/* chart annotations"}
+  - {class: domain, value: aws.com, why: "AWS-owned; CSI driver names such as ebs.csi.aws.com"}
+  - {class: domain, value: ecr.aws, why: "Amazon ECR Public registry (public.ecr.aws)"}
+  - {class: domain, value: awsapps.com, why: "AWS IAM Identity Center portal domain; the alias in front is covered by layers 1 and 3"}
+  - {class: domain, value: bitnami.com, why: "Bitnami public Helm repository (charts.bitnami.com)"}
+  - {class: domain, value: socket.io, why: "The Socket.IO library, usually written as its domain"}
+  - {class: domain, value: sre.google, why: "Google SRE books"}
+  - {class: domain, value: ipapi.co, why: "Public IP geolocation API"}
+  - {class: domain, value: ip-api.com, why: "Public IP geolocation API"}
+  - {class: domain, value: mynetname.net, why: "MikroTik IP Cloud DDNS; the router serial in front is covered by layers 1 and 3"}
+  - {class: domain, value: ddns.net, why: "No-IP dynamic DNS; the hostname in front is covered by layers 1 and 3"}
+  # --- private DNS suffixes that are generic, not an organisation's ---------------------
+  - {class: private-host, value: cluster.local, why: "Kubernetes in-cluster DNS suffix, the same in every cluster"}
+  - {class: private-host, value: host.docker.internal, subdomains: false, why: "Docker Desktop host alias"}
+  - {class: private-host, value: metadata.google.internal, subdomains: false, why: "GCP metadata server"}
+  - {class: private-host, value: localhost.localdomain, subdomains: false, why: "loopback alias"}  # DevSkim: ignore DS162092
+  # --- public addresses ----------------------------------------------------------------
+  - {class: ipv4-public, value: 1.1.1.1, why: "Cloudflare public resolver"}
+  - {class: ipv4-public, value: 1.0.0.1, why: "Cloudflare public resolver"}
+  - {class: ipv4-public, value: 8.8.8.8, why: "Google public resolver"}
+  - {class: ipv4-public, value: 8.8.4.4, why: "Google public resolver"}
+  - {class: ipv4-public, value: 9.9.9.9, why: "Quad9 public resolver"}
+  - {class: ipv4-public, value: 168.63.129.16, why: "Azure platform virtual IP (DNS, health probes), the same in every tenant"}
+  # --- AWS-owned accounts, established by the first manual port -------------------------
+  - {class: account-12, value: "877085696533", why: "AWS-owned EKS add-on image registry for af-south-1 (EKS docs: add-on container image addresses)"}
+  - {class: account-12, value: "098369216593", why: "AWS-owned ELB access-log delivery account for af-south-1 (ELB docs: enable access logging)"}
+  # --- AWS-managed and rule identifiers ------------------------------------------------
+  - {class: uuid, value: 658327ea-f89d-4fab-a63d-7e88639e58f6, why: "AWS-managed CloudFront cache policy Managed-CachingOptimized"}
+  - {class: uuid, value: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad, why: "AWS-managed CloudFront cache policy Managed-CachingDisabled"}
+  - {class: uuid, context: 'kics-scan (?:disable|ignore)', why: "KICS query IDs are public rule identifiers (docs.kics.io, all queries)"}
+  - {class: truncated-id, context: '@[0-9a-f]{7,40}(?:…|\.\.\.)', why: "SHA pins of public GitHub Actions (uses: owner/action@<sha>)"}
+  - {class: truncated-id, context: 'sha256:[0-9a-f]{6,}(?:…|\.\.\.)', why: "Shortened container image digests; a digest names content, not an owner"}
+  - {class: truncated-id, pattern: '9e99a48a', why: "Amazon root CA thumbprint prefix used for the EKS OIDC provider; public"}
+  - {class: truncated-id, pattern: 'e38a8e0a', why: "KICS query ID prefix for 'Resource Not Using Tags'; public"}
+  - {class: truncated-id, pattern: 'baee238e', why: "KICS query ID prefix for 'Passwords And Secrets - Generic Token'; public"}
+  - {class: truncated-id, context: '(?i)\bkics\b', why: "KICS query IDs, shortened in suppression comments; public rule identifiers"}
+  # --- emails that belong to services, not people --------------------------------------
+  - {class: email, value: git@github.com, why: "GitHub SSH remote user"}
+  - {class: email, value: git@gitlab.com, why: "GitLab SSH remote user"}
+  - {class: email, value: noreply@github.com, why: "GitHub system sender"}
+  - {class: email, value: actions@users.noreply.github.com, why: "GitHub Actions bot identity"}
+  - {class: email, value: sk-ssh-ed25519@openssh.com, why: "an SSH key type name (FIDO), not a mailbox"}
+  - {class: email, pattern: '[^@\s]+@([a-z0-9-]+\.)+svc\.cluster\.local', why: "in-cluster service addresses (Kafka listeners, principals), not mailboxes"}

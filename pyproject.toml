@@ -60,6 +60,9 @@ src = ["src", "tests"]
 # reads secrets and posts to GitHub, which is exactly where a swallowed exception or an
 # unchecked subprocess argument turns into a leak.
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "S", "BLE"]
+# SIM905 would turn every "a b c".split() word list into a 100-column list literal; the
+# split form is the readable one for vocabularies.
+ignore = ["SIM905"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607"]

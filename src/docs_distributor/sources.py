@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import base64
 import os
-import subprocess
+import subprocess  # nosec B404 - git runs with a fixed argv and no shell
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -94,7 +95,7 @@ def fetch(cfg: SourceConfig, url: str, token: str | None, workdir: Path) -> Fetc
 def _git_env(token: str | None) -> dict[str, str]:
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-        "HOME": os.environ.get("HOME", "/tmp"),  # noqa: S108 — git wants one; nothing is written
+        "HOME": os.environ.get("HOME", tempfile.gettempdir()),  # git wants one; writes nothing
         "GIT_TERMINAL_PROMPT": "0",
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": "/dev/null",
@@ -113,7 +114,7 @@ def _git_env(token: str | None) -> dict[str, str]:
 
 def _git(args: list[str], *, cwd: Path, env: Mapping[str, str], check: bool = True) -> str:
     try:
-        proc = subprocess.run(  # noqa: S603 — fixed argv, no shell
+        proc = subprocess.run(  # noqa: S603 # nosec B603 B607 - fixed argv, no shell
             ["git", *args],  # noqa: S607 — git from PATH, as in any container
             cwd=cwd,
             env=dict(env),

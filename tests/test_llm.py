@@ -26,6 +26,7 @@ from docs_distributor.llm import (
 from docs_distributor.novelty import Candidate
 
 VOCAB = config.load_vocabulary()
+GATEWAY = "http://litellm.test:4000"  # DevSkim: ignore DS137138
 
 
 class Fake:
@@ -234,9 +235,7 @@ def test_claude_code_backend_routes_through_the_gateway_and_stays_hermetic(tmp_p
     script = fake_claude(
         tmp_path, {"type": "result", "is_error": False, "structured_output": {"text": "ok"}}
     )
-    cfg = LLMConfig(
-        model="claude-sonnet-4-6-max", base_url="http://litellm.test:4000", claude_bin=str(script)
-    )
+    cfg = LLMConfig(model="claude-sonnet-4-6-max", base_url=GATEWAY, claude_bin=str(script))
     env = {
         "PATH": "/usr/bin:/bin",
         "CLAUDE_OAUTH_TOKEN": "sk-ant-oat01-test",
@@ -252,7 +251,7 @@ def test_claude_code_backend_routes_through_the_gateway_and_stays_hermetic(tmp_p
     seen = dict(
         line.split("=", 1) for line in (tmp_path / "env").read_text().splitlines() if "=" in line
     )
-    assert seen["ANTHROPIC_BASE_URL"] == "http://litellm.test:4000"
+    assert seen["ANTHROPIC_BASE_URL"] == GATEWAY
     assert seen["ANTHROPIC_AUTH_TOKEN"] == "sk-ant-oat01-test"
     assert seen["ANTHROPIC_CUSTOM_HEADERS"] == "x-litellm-api-key: Bearer sk-gw"
     assert seen["HOME"].startswith(str(tmp_path))  # not the caller's home

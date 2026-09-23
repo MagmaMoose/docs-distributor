@@ -160,7 +160,7 @@ entries:
   - {class: private-host, value: cluster.local, why: "Kubernetes in-cluster DNS suffix, the same in every cluster"}
   - {class: private-host, value: host.docker.internal, subdomains: false, why: "Docker Desktop host alias"}
   - {class: private-host, value: metadata.google.internal, subdomains: false, why: "GCP metadata server"}
-  - {class: private-host, value: localhost.localdomain, subdomains: false, why: "loopback alias"}
+  - {class: private-host, value: localhost.localdomain, subdomains: false, why: "loopback alias"}  # DevSkim: ignore DS162092
   # --- public addresses ----------------------------------------------------------------
   - {class: ipv4-public, value: 1.1.1.1, why: "Cloudflare public resolver"}
   - {class: ipv4-public, value: 1.0.0.1, why: "Cloudflare public resolver"}

@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ include "docs-distributor.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "docs-distributor.labels" . | nindent 4 }}
 spec:

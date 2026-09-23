@@ -56,7 +56,7 @@ DOCUMENTATION_NETWORKS = tuple(
 
 # RFC 2606 and RFC 6761: names that can never belong to anyone.
 RESERVED_DOMAINS = ("example.com", "example.net", "example.org", "example.io")
-RESERVED_TLDS = ("example", "test", "invalid", "localhost")
+RESERVED_TLDS = ("example", "test", "invalid", "localhost")  # DevSkim: ignore DS162092
 
 
 # --- inputs ------------------------------------------------------------------------------
@@ -380,7 +380,7 @@ def _regex(
     return find
 
 
-# Placeholder spellings for tokens that have a vendor prefix: "xoxb-your-token",
+# Placeholder spellings after a token's vendor prefix: "your-token",
 # "sk-ant-...", "<token>", "xxxx". Matching one of these is documentation, not a leak.
 _TOKEN_PLACEHOLDER = re.compile(
     r"(?:[xX.*_\-…]*|<[^>]*>|(?:your|my|example|placeholder|redacted|changeme|dummy|fake|"

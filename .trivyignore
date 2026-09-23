@@ -1,0 +1,6 @@
+# DS-0026: no HEALTHCHECK. A batch job exits when done; Kubernetes owns its lifecycle.
+DS-0026
+
+# KSV-0125 / KSV0125: ghcr.io/magmamoose is this project's own registry.
+KSV-0125
+KSV0125

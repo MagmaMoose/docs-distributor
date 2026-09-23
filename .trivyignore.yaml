@@ -1,0 +1,16 @@
+misconfigurations:
+  # DS-0026: no HEALTHCHECK. The image runs a batch job (a CronJob's pod) that exits when
+  # it is done; there is no long-running process for a health check to probe, and
+  # Kubernetes, not Docker, owns the pod's lifecycle.
+  - id: DS-0026
+    paths:
+      - Dockerfile
+
+  # KSV-0125: "untrusted registry". ghcr.io/magmamoose is where this project publishes
+  # its own image; the chart exists to deploy exactly that image.
+  - id: KSV-0125
+    paths:
+      - charts/docs-distributor/templates/cronjob.yaml
+  - id: KSV0125
+    paths:
+      - charts/docs-distributor/templates/cronjob.yaml

@@ -55,7 +55,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 
-# git: sparse, shallow, read-only clones of the source repositories.
+# git: sparse, shallow, read-only clones of the source repositories. Versions come from
+# the base image's Debian release (see the KICS note at the top).
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \

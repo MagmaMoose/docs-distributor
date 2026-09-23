@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import posixpath
 import re
-import subprocess
+import subprocess  # nosec B404 - fixed argv, no shell, see the call sites
 import sys
 import tempfile
 from collections.abc import Mapping
@@ -130,7 +130,7 @@ def mkdocs_build(repo: Path, timeout: int = 900) -> tuple[str, str]:
             "NO_COLOR": "1",
         }
         try:
-            proc = subprocess.run(  # noqa: S603 — fixed argv, no shell
+            proc = subprocess.run(  # noqa: S603 # nosec B603 - fixed argv, no shell
                 [sys.executable, "-m", "mkdocs", "build", "--strict", "--site-dir", site],
                 cwd=repo,
                 env=env,

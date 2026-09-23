@@ -149,7 +149,8 @@ def test_truncation_shorter_than_six_characters_is_not_a_finding() -> None:
 
 
 def test_personal_name_in_a_code_comment_is_caught() -> None:
-    text = '```hcl\nresource "x" "y" {\n  # TODO(jan.devries): rotate this\n}\n```\n'
+    comment = "  # TODO(jan.devries): rotate this\n"  # DevSkim: ignore DS176209
+    text = '```hcl\nresource "x" "y" {\n' + comment + "}\n```\n"
     findings = run(text)
     assert [f.rule for f in findings] == ["literal"]
     assert findings[0].line == 3
@@ -214,7 +215,8 @@ def test_public_ipv4_outside_the_documentation_ranges_is_caught() -> None:
     [
         "gateway 203.0.113.10 and 198.51.100.0/24 and 192.0.2.1",
         "private 10.150.100.0/22, 172.16.0.1, 192.168.19.69",
-        "loopback 127.0.0.1, link-local 169.254.169.254, CGNAT 100.64.0.1",
+        "loopback 127.0.0.1, link-local 169.254.169.254"  # DevSkim: ignore DS162092
+        ", CGNAT 100.64.0.1",
         "resolver 1.1.1.1",
         "chart v1.2.3.4 and 0.0.0.0/0",
     ],
@@ -239,7 +241,8 @@ def test_aws_access_key_is_caught() -> None:
 
 def test_slack_token_is_caught_and_placeholders_are_not() -> None:
     assert "slack-token" in rules_hit("xoxb-" + "7719203348-5510293847-QmZr8tXvLp")
-    assert rules_hit("token xoxb-your-token or xoxb-... or xoxb-<token>") == set()
+    shapes = "token xoxb-your-token or xoxb-... or xoxb-<token>"  # secretlint-disable-line
+    assert rules_hit(shapes) == set()
 
 
 def test_private_key_block_is_caught() -> None:
@@ -274,11 +277,12 @@ def test_gps_pair_is_caught() -> None:
 
 def test_private_host_suffix_is_caught_and_cluster_dns_passes() -> None:
     assert rules_hit("ssh bastion01.ops.corp") == {"private-host"}
-    assert rules_hit("http://litellm.automation.svc.cluster.local:4000") == set()
+    url = "http://litellm.automation.svc.cluster.local:4000"  # DevSkim: ignore DS137138
+    assert rules_hit(url) == set()
 
 
 def test_credential_assignment_is_caught_and_references_are_not() -> None:
-    assert "credential" in rules_hit('password: "Wx7qT9zr2Lm4"')
+    assert "credential" in rules_hit('password: "Wx7qT9zr2Lm4"')  # gitleaks:allow
     clean = (
         "password: <redacted>\n"
         "token: ${{ secrets.GITHUB_TOKEN }}\n"

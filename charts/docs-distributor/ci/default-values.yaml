@@ -16,7 +16,8 @@ sources:
     auth:
       type: none
 llm:
-  baseUrl: http://litellm.automation.svc.cluster.local:4000
+  # In-cluster plain HTTP to the gateway's raw listener. DevSkim: ignore DS137138
+  baseUrl: http://litellm.automation.svc.cluster.local:4000  # DevSkim: ignore DS137138
 report:
   issueRepo: example-org/docs-distributor
 secrets:

@@ -94,7 +94,11 @@ _Loader.add_multi_constructor("!", lambda loader, suffix, node: None)
 
 def load_yaml(path: Path) -> Any:
     with path.open(encoding="utf-8") as fh:
-        return yaml.load(fh, Loader=_Loader)  # noqa: S506 — _Loader is a SafeLoader subclass
+        loader = _Loader(fh)  # a SafeLoader subclass: it constructs data, never objects
+        try:
+            return loader.get_single_data()
+        finally:
+            loader.dispose()
 
 
 def _rules_file(name: str) -> Path:
@@ -626,7 +630,7 @@ class Config:
     sources: tuple[SourceConfig, ...]
     llm: LLMConfig = field(default_factory=LLMConfig)
     cache_dir: str = "/var/lib/docs-distributor/cache"
-    work_dir: str = "/tmp/docs-distributor"  # noqa: S108 — an emptyDir in the chart
+    work_dir: str = ""  # empty: the system temp dir; the chart sets /work (an emptyDir)
     report: ReportConfig = field(default_factory=ReportConfig)
     languages: tuple[str, ...] = ("en",)
 

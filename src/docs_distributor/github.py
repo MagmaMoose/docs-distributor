@@ -83,10 +83,14 @@ def token_for(
 
 
 def blob_sha(content: bytes) -> str:
-    """The git object id GitHub will give this content."""
-    return hashlib.sha1(
-        f"blob {len(content)}\0".encode() + content, usedforsecurity=False
-    ).hexdigest()
+    """The git object id GitHub will give this content.
+
+    Git names objects by SHA-1; this reproduces that name to skip re-uploading unchanged
+    files. Nothing relies on it for security.
+    """
+    digest = hashlib.sha1(usedforsecurity=False)  # nosemgrep  # DevSkim: ignore DS126858
+    digest.update(f"blob {len(content)}\0".encode() + content)
+    return digest.hexdigest()
 
 
 class GitHub:

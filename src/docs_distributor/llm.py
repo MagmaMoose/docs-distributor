@@ -29,7 +29,7 @@ import json
 import os
 import re
 import string
-import subprocess
+import subprocess  # nosec B404 - fixed argv, no shell, see the call sites
 import tempfile
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -208,7 +208,7 @@ class ClaudeCodeBackend:
         cwd = self.workdir / "empty"
         cwd.mkdir(parents=True, exist_ok=True)
         try:
-            proc = subprocess.run(  # noqa: S603 — fixed argv, no shell
+            proc = subprocess.run(  # noqa: S603 # nosec B603 - fixed argv, no shell
                 self.command(template),
                 input=user,
                 capture_output=True,

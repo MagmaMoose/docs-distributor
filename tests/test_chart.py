@@ -42,7 +42,8 @@ def test_rendered_config_is_accepted_by_the_program() -> None:
     assert [s.name for s in cfg.sources] == ["cloud-platform", "public-handbook"]
     assert cfg.sources[0].auth.token_env == "DD_SOURCE_TOKEN_CLOUD_PLATFORM"
     assert cfg.sources[0].url is None  # the private URL comes from the mapping
-    assert cfg.llm.base_url == "http://litellm.automation.svc.cluster.local:4000"
+    gateway = "http://litellm.automation.svc.cluster.local:4000"  # DevSkim: ignore DS137138
+    assert cfg.llm.base_url == gateway
 
 
 def test_the_job_is_hardened() -> None:

@@ -121,7 +121,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     cfg = config.load_config(Path(args.config))
     vocabulary = config.load_vocabulary()
     mapping = _mapping(args.mapping, vocabulary, required=True)
-    assert mapping is not None  # noqa: S101 — required=True raised otherwise
+    if mapping is None:  # required=True raises first; this keeps the type checker honest
+        raise ConfigError("mapping", ["no mapping found"])
     allow = config.load_allow()
     local = dict(s.split("=", 1) for s in getattr(args, "source", []))
     in_cluster = args.command == "sync"
@@ -132,7 +133,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     workdir = Path(
         tempfile.mkdtemp(
             prefix="docs-distributor-",
-            dir=cfg.work_dir if in_cluster and Path(cfg.work_dir).exists() else None,
+            dir=cfg.work_dir
+            if in_cluster and cfg.work_dir and Path(cfg.work_dir).exists()
+            else None,
         )
     )
 
@@ -337,7 +340,7 @@ def write_onboarding(
             rules.append(
                 {
                     "from": c.term,
-                    "to": (p.to if p else "") or "TODO",
+                    "to": (p.to if p else "") or "<choose a stand-in>",
                     "class": p.cls if p else "other",
                     "why": d.reason,
                 }

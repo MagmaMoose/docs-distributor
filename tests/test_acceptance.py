@@ -85,10 +85,9 @@ class FakeGitHub:
         self.issues: list[dict[str, Any]] = []
 
     def _tree(self, files: dict[str, bytes]) -> str:
-        sha = hashlib.sha1(
-            json.dumps(sorted((p, blob_sha(b)) for p, b in files.items())).encode(),
-            usedforsecurity=False,
-        ).hexdigest()
+        digest = hashlib.sha1(usedforsecurity=False)  # nosemgrep  # DevSkim: ignore DS126858
+        digest.update(json.dumps(sorted((p, blob_sha(b)) for p, b in files.items())).encode())
+        sha = digest.hexdigest()
         self.trees[sha] = dict(files)
         return sha
 

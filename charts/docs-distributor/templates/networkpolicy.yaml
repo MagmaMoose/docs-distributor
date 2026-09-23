@@ -3,6 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{ include "docs-distributor.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "docs-distributor.labels" . | nindent 4 }}
 spec:

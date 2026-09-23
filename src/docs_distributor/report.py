@@ -77,7 +77,9 @@ class RunReport:
     def write(self, root: Path) -> Path:
         path = root / self.run_id
         path.mkdir(parents=True, exist_ok=True)
-        os.chmod(path, 0o700)
+        # Owner-only: the report can hold real values. 0700 is the tightest a directory can be
+        # and still be entered.
+        os.chmod(path, 0o700)  # nosemgrep
         target = path / "report.json"
         target.write_text(
             json.dumps(asdict(self), indent=1, sort_keys=True, default=str), encoding="utf-8"

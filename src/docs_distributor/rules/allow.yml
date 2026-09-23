@@ -127,6 +127,7 @@ entries:
   - {class: domain, value: pagerduty.com, why: "PagerDuty docs and API"}
   - {class: domain, value: sonarcloud.io, why: "SonarCloud"}
   - {class: domain, value: sonarsource.com, why: "SonarQube docs"}
+  - {class: domain, value: artifacthub.io, why: "Artifact Hub, including its artifacthub.io/* chart annotations"}
   - {class: domain, value: aws.com, why: "AWS-owned; CSI driver names such as ebs.csi.aws.com"}
   - {class: domain, value: ecr.aws, why: "Amazon ECR Public registry (public.ecr.aws)"}
   - {class: domain, value: awsapps.com, why: "AWS IAM Identity Center portal domain; the alias in front is covered by layers 1 and 3"}
@@ -160,6 +161,8 @@ entries:
   - {class: truncated-id, context: 'sha256:[0-9a-f]{6,}(?:…|\.\.\.)', why: "Shortened container image digests; a digest names content, not an owner"}
   - {class: truncated-id, pattern: '9e99a48a', why: "Amazon root CA thumbprint prefix used for the EKS OIDC provider; public"}
   - {class: truncated-id, pattern: 'e38a8e0a', why: "KICS query ID prefix for 'Resource Not Using Tags'; public"}
+  - {class: truncated-id, pattern: 'baee238e', why: "KICS query ID prefix for 'Passwords And Secrets - Generic Token'; public"}
+  - {class: truncated-id, context: '(?i)\bkics\b', why: "KICS query IDs, shortened in suppression comments; public rule identifiers"}
   # --- emails that belong to services, not people --------------------------------------
   - {class: email, value: git@github.com, why: "GitHub SSH remote user"}
   - {class: email, value: git@gitlab.com, why: "GitLab SSH remote user"}

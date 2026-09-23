@@ -1,0 +1,23 @@
+# This repository is public and must never hold a private value. Two local hooks:
+#
+#   private-values-literal   every file, against the maintainer's real mapping
+#                            (DOCS_DISTRIBUTOR_MAPPING, or ~/.config/docs-distributor/). Without
+#                            a mapping it has nothing to compare against and passes.
+#   private-values-patterns  the pattern classes over everything but Python source and the
+#                            tests, which contain look-alikes on purpose (tests/fixtures/planted
+#                            exists to trip the gate), and .gitignore, GitHub's own template.
+repos:
+  - repo: local
+    hooks:
+      - id: private-values-literal
+        name: no private values (literal)
+        entry: uv run --quiet docs-distributor audit --only literal
+        language: system
+        pass_filenames: true
+        exclude: ^uv\.lock$
+      - id: private-values-patterns
+        name: no private values (patterns)
+        entry: uv run --quiet docs-distributor audit --only patterns --allow .docs-distributor-allow.yml
+        language: system
+        pass_filenames: true
+        exclude: ^(tests/|uv\.lock$|\.gitignore$)|\.py$

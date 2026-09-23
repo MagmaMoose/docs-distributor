@@ -582,11 +582,16 @@ _HOST = re.compile(
 )
 
 
+def _called(text: str, end: int) -> bool:
+    """``m.group(1)`` and ``items.info[0]`` are code: a host is never called or indexed."""
+    return text[end : end + 1] in ("(", "[")
+
+
 def _find_domains(text: str) -> Iterator[tuple[int, int, str]]:
     for m in _HOST.finditer(text):
         host = m.group(1)
         labels = host.split(".")
-        if labels[0].lower() in _CODE_ROOTS or not _is_tld(labels[-1]):
+        if labels[0].lower() in _CODE_ROOTS or not _is_tld(labels[-1]) or _called(text, m.end(1)):
             continue
         yield m.start(1), m.end(1), host
 
@@ -605,14 +610,14 @@ _PRIVATE_SUFFIXES = (
 _PRIVATE_HOST = re.compile(
     r"(?<![A-Za-z0-9._-])((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:"
     + "|".join(re.escape(s) for s in _PRIVATE_SUFFIXES)
-    + r"))(?![A-Za-z0-9_-])",
+    + r"))(?![A-Za-z0-9_-])(?!\.[A-Za-z0-9])",  # the suffix is the LAST label
     re.IGNORECASE,
 )
 
 
 def _find_private_hosts(text: str) -> Iterator[tuple[int, int, str]]:
     for m in _PRIVATE_HOST.finditer(text):
-        if m.group(1).split(".")[0].lower() not in _CODE_ROOTS:
+        if m.group(1).split(".")[0].lower() not in _CODE_ROOTS and not _called(text, m.end(1)):
             yield m.start(1), m.end(1), m.group(1)
 
 

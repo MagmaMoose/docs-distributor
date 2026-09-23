@@ -1,0 +1,11 @@
+{{- include "docs-distributor.guards" . -}}
+docs-distributor runs on "{{ .Values.schedule }}" and proposes changes to {{ .Values.target.repo }} as one pull request.
+
+Run it now:
+  kubectl -n {{ .Release.Namespace }} create job --from=cronjob/{{ include "docs-distributor.fullname" . }} {{ include "docs-distributor.fullname" . }}-manual
+
+Exit codes: 0 published or nothing to publish, 2 blocked on new terms (see report.issueRepo),
+3 audit failed, 4 verification failed, 5 configuration, 6 fetch or API failure.
+
+Private run reports are on the "state" volume under /var/lib/docs-distributor/reports.
+They can hold real values: read them with kubectl cp, never paste them anywhere public.

@@ -1,0 +1,6 @@
+# Public facts about THIS repository that its own private-value hook must let through.
+# The generic ones live in src/docs_distributor/rules/allow.yml.
+version: 1
+entries:
+  - {class: domain, value: magmamoose.com, why: "the maintaining organisation's own public domain"}
+  - {class: email, value: caleb@magmamoose.com, why: "the package author, as published on PyPI metadata"}

@@ -1,0 +1,39 @@
+apiVersion: v2
+name: docs-distributor
+description: A weekly CronJob that anonymises documentation from private repositories into a public docs site, behind a deterministic leak audit.
+type: application
+
+# version is the CHART version and appVersion the application version; they move
+# independently. appVersion is the default image tag, so it must name a tag that exists:
+# Diatreme tags images `v<version>`, hence the leading "v".
+version: 0.1.0
+appVersion: "v0.1.0"
+
+home: https://github.com/MagmaMoose/docs-distributor
+sources:
+  - https://github.com/MagmaMoose/docs-distributor
+keywords:
+  - documentation
+  - anonymisation
+  - mkdocs
+  - cronjob
+maintainers:
+  - name: Caleb Sargeant
+    url: https://github.com/CalebSargeant
+
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/category: integration-delivery
+  artifacthub.io/prerelease: "true"
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/images: |
+    - name: docs-distributor
+      image: ghcr.io/magmamoose/docs-distributor:v0.1.0
+  artifacthub.io/links: |
+    - name: Source
+      url: https://github.com/MagmaMoose/docs-distributor
+    - name: Trust model
+      url: https://github.com/MagmaMoose/docs-distributor#trust-model
+  artifacthub.io/changes: |
+    - kind: added
+      description: First release: weekly CronJob, persistent LLM cache, fail-closed leak audit.

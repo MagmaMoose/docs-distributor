@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# docs-distributor: local run artefacts (reports and caches can hold real values)
+.docs-distributor/
+site/

@@ -1,0 +1,148 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "docs-distributor.fullname" . }}
+  labels:
+    {{- include "docs-distributor.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  {{- with .Values.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  # With no sources there is nothing to sync: the CronJob exists, suspended, so the chart
+  # renders and installs cleanly before it is configured.
+  suspend: {{ or .Values.suspend (empty .Values.sources) }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  startingDeadlineSeconds: {{ .Values.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "docs-distributor.labels" . | nindent 8 }}
+    spec:
+      backoffLimit: {{ .Values.backoffLimit }}
+      activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds }}
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
+      template:
+        metadata:
+          labels:
+            {{- include "docs-distributor.selectorLabels" . | nindent 12 }}
+          annotations:
+            checksum/config: {{ include "docs-distributor.config" . | sha256sum }}
+            {{- with .Values.podAnnotations }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        spec:
+          # A failed run is a finished run: the exit code is the report (2 blocked,
+          # 3 audit, 4 verify). Restarting the container in place would only repeat it.
+          restartPolicy: Never
+          serviceAccountName: {{ include "docs-distributor.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.priorityClassName }}
+          priorityClassName: {{ . }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: docs-distributor
+              image: {{ include "docs-distributor.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: [{{ .Values.command | quote }}]
+              env:
+                - name: DOCS_DISTRIBUTOR_CONFIG
+                  value: /etc/docs-distributor/config/config.yml
+                - name: DOCS_DISTRIBUTOR_MAPPING
+                  value: /etc/docs-distributor/private/mapping.d
+                - name: HOME
+                  value: /home/docs-distributor
+                - name: TMPDIR
+                  value: /tmp
+                {{- $s := .Values.secrets.keys }}
+                {{- include "docs-distributor.secretEnv" (list . "DD_GITHUB_APP_ID" $s.githubAppId false) | nindent 16 }}
+                {{- include "docs-distributor.secretEnv" (list . "DD_GITHUB_APP_INSTALLATION_ID" $s.githubAppInstallationId true) | nindent 16 }}
+                {{- include "docs-distributor.secretEnv" (list . "DD_GITHUB_APP_PRIVATE_KEY" $s.githubAppPrivateKey false) | nindent 16 }}
+                {{- if eq .Values.llm.backend "claude-code" }}
+                {{- include "docs-distributor.secretEnv" (list . "CLAUDE_OAUTH_TOKEN" $s.claudeOAuthToken true) | nindent 16 }}
+                {{- include "docs-distributor.secretEnv" (list . "LITELLM_API_KEY" $s.litellmApiKey true) | nindent 16 }}
+                {{- end }}
+                {{- if eq .Values.llm.backend "anthropic" }}
+                {{- include "docs-distributor.secretEnv" (list . "ANTHROPIC_API_KEY" $s.anthropicApiKey false) | nindent 16 }}
+                {{- end }}
+                {{- include "docs-distributor.secretEnv" (list . "SLACK_WEBHOOK_URL" $s.slackWebhook true) | nindent 16 }}
+                {{- range .Values.sources }}
+                {{- if eq (dig "auth" "type" "token" .) "token" }}
+                {{- include "docs-distributor.secretEnv" (list $ (include "docs-distributor.sourceTokenEnv" .name) (dig "auth" "tokenSecretKey" "" .) false) | nindent 16 }}
+                {{- end }}
+                {{- end }}
+                {{- with .Values.extraEnv }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/docs-distributor/config
+                  readOnly: true
+                - name: mapping
+                  mountPath: /etc/docs-distributor/private/mapping.d
+                  readOnly: true
+                - name: state
+                  mountPath: /var/lib/docs-distributor
+                - name: work
+                  mountPath: /work
+                - name: tmp
+                  mountPath: /tmp
+                - name: home
+                  mountPath: /home/docs-distributor
+          volumes:
+            - name: config
+              configMap:
+                name: {{ include "docs-distributor.fullname" . }}
+            # Only the mapping keys are projected as files; every other key reaches the
+            # container as one environment variable and nothing else.
+            - name: mapping
+              secret:
+                secretName: {{ .Values.secrets.existingSecret }}
+                defaultMode: 0400
+                items:
+                  {{- range .Values.secrets.keys.mapping }}
+                  - key: {{ . }}
+                    path: {{ . }}
+                  {{- end }}
+            - name: state
+              {{- if .Values.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ default (printf "%s-state" (include "docs-distributor.fullname" .)) .Values.persistence.existingClaim }}
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            # The source clones and the docs-repo checkout. Scratch, gone with the pod.
+            - name: work
+              emptyDir:
+                sizeLimit: 2Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 1Gi
+            - name: home
+              emptyDir:
+                sizeLimit: 256Mi
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

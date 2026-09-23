@@ -1,0 +1,408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docs-distributor chart values",
+  "description": "Structural validation only. Rules that need context (a token source without a token key, a gateway without its key, persistence off) live in templates/_guards.tpl, because JSON Schema cannot express them with useful messages.",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "automount": {
+          "type": "boolean"
+        }
+      }
+    },
+    "schedule": {
+      "type": "string",
+      "minLength": 9
+    },
+    "timeZone": {
+      "type": "string"
+    },
+    "suspend": {
+      "type": "boolean"
+    },
+    "concurrencyPolicy": {
+      "enum": [
+        "Forbid",
+        "Replace",
+        "Allow"
+      ]
+    },
+    "startingDeadlineSeconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "backoffLimit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "activeDeadlineSeconds": {
+      "type": "integer",
+      "minimum": 60
+    },
+    "successfulJobsHistoryLimit": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failedJobsHistoryLimit": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ttlSecondsAfterFinished": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "command": {
+      "enum": [
+        "sync",
+        "plan"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "branchPrefix": {
+          "type": "string",
+          "pattern": "^[a-z]+/"
+        },
+        "mkdocs": {
+          "type": "string"
+        },
+        "navAfter": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "github-app",
+                "token",
+                "none"
+              ]
+            },
+            "apiUrl": {
+              "type": "string",
+              "pattern": "^https?://"
+            }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "target"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^docs/[^.][^\\s]*$"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "docsDir": {
+            "type": "string"
+          },
+          "nav": {
+            "type": "string"
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string",
+            "description": "Leave empty and put the URL in the private mapping when it names the organisation."
+          },
+          "auth": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "enum": [
+                  "token",
+                  "none"
+                ]
+              },
+              "tokenSecretKey": {
+                "type": "string"
+              },
+              "apiUrl": {
+                "type": "string",
+                "pattern": "^https?://"
+              }
+            }
+          }
+        }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "enum": [
+            "claude-code",
+            "anthropic",
+            "replay"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseUrl": {
+          "type": "string",
+          "pattern": "^$|^https?://"
+        },
+        "effort": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "thinkingTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 10
+        },
+        "batchSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{2}$"
+      },
+      "minItems": 1
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "issueRepo": {
+          "type": "string",
+          "pattern": "^$|^[^/]+/[^/]+$"
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "keys": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mapping": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "githubAppId": {
+              "type": "string"
+            },
+            "githubAppInstallationId": {
+              "type": "string"
+            },
+            "githubAppPrivateKey": {
+              "type": "string"
+            },
+            "claudeOAuthToken": {
+              "type": "string"
+            },
+            "litellmApiKey": {
+              "type": "string"
+            },
+            "anthropicApiKey": {
+              "type": "string"
+            },
+            "slackWebhook": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingClaim": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "storageClass": {
+          "type": "string"
+        },
+        "accessModes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
+    "allowEphemeralCache": {
+      "type": "boolean"
+    },
+    "resources": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "securityContext": {
+      "type": "object"
+    },
+    "priorityClassName": {
+      "type": "string"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array"
+    },
+    "affinity": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "extraEnv": {
+      "type": "array"
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "gatewayPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "egress": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

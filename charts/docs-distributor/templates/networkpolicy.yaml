@@ -1,0 +1,36 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "docs-distributor.fullname" . }}
+  labels:
+    {{- include "docs-distributor.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "docs-distributor.selectorLabels" . | nindent 6 }}
+  # Nothing ever connects to the job.
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    # DNS first: every other destination is a name.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # The model gateway, in-cluster.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: TCP, port: {{ .Values.networkPolicy.gatewayPort }}}
+    # GitHub (sources, docs repo, issues) and Slack are all HTTPS.
+    - ports:
+        - {protocol: TCP, port: 443}
+    {{- with .Values.networkPolicy.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

@@ -67,6 +67,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="print matched text (do not paste the output anywhere public)",
     )
+    a.add_argument(
+        "--allow",
+        action="append",
+        default=[],
+        type=Path,
+        help="extra allow file(s), same format as rules/allow.yml",
+    )
+    a.add_argument(
+        "--only",
+        choices=("literal", "patterns"),
+        help="run one layer; `literal` without a mapping checks nothing and passes",
+    )
 
     o = sub.add_parser("onboard", help="propose a mapping and nav for a new source")
     o.add_argument("source", type=Path, help="a local checkout of the source repository")
@@ -205,17 +217,35 @@ def print_plan(rep: report.RunReport) -> None:
 def cmd_audit(args: argparse.Namespace) -> int:
     vocabulary = config.load_vocabulary()
     mapping = _mapping(args.mapping, vocabulary, required=False)
-    rules = config.build_rules(mapping, config.load_allow(), vocabulary)
+    allow = config.load_allow()
+    for extra in args.allow:
+        more = config.load_allow(extra)
+        allow = config.AllowRules(
+            audit.Allowlist(allow.allowlist.entries + more.allowlist.entries),
+            allow.terms | more.terms,
+        )
+    rules = config.build_rules(mapping, allow, vocabulary)
     files: dict[str, bytes] = {}
     for p in args.paths:
         if p.is_dir():
             files |= {f"{p.as_posix().rstrip('/')}/{k}": v for k, v in audit.read_tree(p).items()}
         elif p.is_file():
             files[p.as_posix()] = p.read_bytes()
+    if args.only == "literal":
+        if mapping is None:
+            sys.stdout.write("no mapping: the literal layer has nothing to check\n")
+            return 0
+        rules = audit.Rules(literals=rules.literals)
     result = audit.audit_files(
         files, rules, cleared_binaries=mapping.cleared_binaries() if mapping else frozenset()
     )
-    required = ("literal", "patterns") if mapping else ("patterns",)
+    if args.only == "literal":
+        result.findings = [f for f in result.findings if f.layer == 1]
+    elif args.only == "patterns":
+        result.findings = [f for f in result.findings if f.layer == 2]
+    required: tuple[str, ...] = ("literal", "patterns") if mapping else ("patterns",)
+    if args.only:
+        required = (args.only,)
     for f in result.findings:
         line = f.public()
         if args.show_matches:

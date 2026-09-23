@@ -1,0 +1,96 @@
+name: CI
+
+# Tests, types and lint for the program; lint, render and schema validation for the chart;
+# and the pattern layer of the gate over this repository itself, because a public repo that
+# anonymises other people's docs must not be the place a private value leaks from.
+#
+# All actions are SHA-pinned (Chargate's pre-commit hook enforces it); the trailing comment
+# is the tag each SHA corresponds to.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      # The chart tests render the chart and parse the config.yml it produces, so helm has to
+      # be here too; without it they skip and the chart/program contract goes unchecked.
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - run: uv sync --frozen
+      - run: uv run ruff check src tests
+      - run: uv run ruff format --check src tests
+      - run: uv run mypy
+      - run: uv run pytest --cov=docs_distributor --cov-report=term-missing --cov-report=xml
+      - name: The golden tree is up to date
+        run: git diff --exit-code tests/fixtures/golden
+
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - uses: yokawasa/action-setup-kube-tools@b16d49b2c459d33cf9d4c300a220ef0bcdbc730a # v0.14.0
+        with:
+          setup-tools: kubeconform
+          kubeconform: '0.6.7'
+      - name: helm lint
+        run: |
+          set -euo pipefail
+          helm lint charts/docs-distributor
+          helm lint charts/docs-distributor --values charts/docs-distributor/ci/default-values.yaml
+      # A chart whose contents changed but whose version did not is invisible to anyone
+      # pinning a range: they keep the old artefact and the fix appears not to have shipped.
+      - name: Chart version bumped when the chart changed
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          chart=charts/docs-distributor
+          git diff --quiet "${BASE}" HEAD -- "${chart}" && exit 0
+          old="$(git show "${BASE}:${chart}/Chart.yaml" 2>/dev/null | grep -E '^version:' | awk '{print $2}' || true)"
+          new="$(grep -E '^version:' "${chart}/Chart.yaml" | awk '{print $2}')"
+          if [ -n "${old}" ] && [ "${old}" = "${new}" ]; then
+            echo "::error file=${chart}/Chart.yaml::the chart changed but its version is still ${old}"
+            exit 1
+          fi
+      # Default values (an inert, suspended CronJob) and the CI values (everything on), both
+      # validated against the real Kubernetes API schemas.
+      - name: Render and validate
+        run: |
+          set -euo pipefail
+          helm template t charts/docs-distributor \
+            | kubeconform -strict -summary -kubernetes-version 1.33.0 -schema-location default
+          helm template t charts/docs-distributor --values charts/docs-distributor/ci/default-values.yaml \
+            | kubeconform -strict -summary -kubernetes-version 1.33.0 -schema-location default
+
+  private-values:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - run: uv sync --frozen
+      # The literal layer needs the real mapping, which CI never has; it runs in the
+      # maintainer's pre-commit hook instead. The pattern layer runs here on every file the
+      # hook covers, so a push that skipped the hook is still checked.
+      - name: Pattern layer over the repository
+        run: |
+          set -euo pipefail
+          git ls-files -z \
+            | grep -zvE '^(tests/|uv\.lock$|\.gitignore$)|\.py$' \
+            | xargs -0 uv run docs-distributor audit --only patterns --allow .docs-distributor-allow.yml

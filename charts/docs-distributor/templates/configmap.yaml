@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docs-distributor.fullname" . }}
+  labels:
+    {{- include "docs-distributor.labels" . | nindent 4 }}
+data:
+  # Everything here is public by design: which docs repo, which aliases, which model.
+  # The source URLs and the mapping live only in the Secret.
+  config.yml: |
+    {{- include "docs-distributor.config" . | nindent 4 }}

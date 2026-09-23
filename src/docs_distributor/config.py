@@ -55,9 +55,12 @@ RULE_CLASSES = frozenset(
 CASE_MODES = ("insensitive", "exact", "preserve")
 BOUNDARY_MODES = ("auto", "word", "none")
 
+# In the pod, then on a maintainer's machine. Never a path inside a repository.
 DEFAULT_MAPPING_PATHS = (
     Path("/etc/docs-distributor/private/mapping.d"),
     Path("/etc/docs-distributor/private/mapping.yml"),
+    Path.home() / ".config" / "docs-distributor" / "mapping.d",
+    Path.home() / ".config" / "docs-distributor" / "mapping.yml",
 )
 
 

@@ -1,0 +1,20 @@
+# For repositories that RECEIVE generated docs, such as the public docs site. Add to its
+# .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/MagmaMoose/docs-distributor
+#       rev: v0.1.0            # pin to a tag or SHA
+#       hooks:
+#         - id: docs-distributor-audit
+#           files: ^docs/cloud-platform/
+#
+# The pattern layer always runs. The literal layer runs when DOCS_DISTRIBUTOR_MAPPING points
+# at a mapping, which only the maintainer's machine has; a hand edit that reintroduces a real
+# name is caught there before it is ever pushed.
+- id: docs-distributor-audit
+  name: docs-distributor leak audit
+  description: The docs-distributor gate over staged files.
+  entry: docs-distributor audit
+  language: python
+  pass_filenames: true
+  types_or: [markdown, yaml, json, text]

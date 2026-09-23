@@ -391,3 +391,13 @@ def test_audit_tree_reads_a_directory_and_skips_git_internals(tmp_path: Path) ->
     result = audit_tree(tmp_path, RULES)
     assert [(f.path, f.rule) for f in result.findings] == [("docs/a.md", "ipv4-public")]
     assert result.files == 1
+
+
+def test_called_or_indexed_names_are_code_not_hosts() -> None:
+    assert rules_hit("```python\nreturn m.group(1) + items.info[0]\n```\n") == set()
+    assert "domain" in rules_hit("see acme.group for details")
+
+
+def test_private_suffix_must_be_the_last_label() -> None:
+    assert rules_hit("clone git.internal.example.com") == set()
+    assert rules_hit("resolve db.internal and cache.corp.") == {"private-host"}

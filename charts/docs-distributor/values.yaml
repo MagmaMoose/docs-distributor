@@ -1,0 +1,201 @@
+# docs-distributor: Helm values.
+#
+# One CronJob. Each run fetches the configured source repositories, anonymises their docs
+# through the private mapping, has the gate audit the result, and opens or updates ONE pull
+# request on the public docs repository. It publishes nothing unless every check passes.
+
+image:
+  repository: ghcr.io/magmamoose/docs-distributor
+  # Empty = .Chart.AppVersion, which names a tag that exists.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # The job talks to GitHub and a model gateway, never to the Kubernetes API.
+  automount: false
+
+# ---------------------------------------------------------------------------------------
+# Schedule
+# ---------------------------------------------------------------------------------------
+
+# Weekly. An odd minute keeps it off the top-of-the-hour herd.
+schedule: "17 5 * * 1"
+# Honoured by Kubernetes 1.27+; empty leaves the controller's zone (UTC).
+timeZone: ""
+suspend: false
+# Two overlapping runs would race each other onto the same pull-request branch.
+concurrencyPolicy: Forbid
+# A run missed by more than an hour waits for next week rather than firing late.
+startingDeadlineSeconds: 3600
+# One retry at most. A refusal by the gate is not flaky: retrying repeats it, and each
+# attempt can spend model quota. The retry is for a transient fetch or API failure.
+backoffLimit: 1
+# A cold first run (every term classified, every prose repair asked for) takes longer
+# than a warm weekly run; an hour covers both.
+activeDeadlineSeconds: 3600
+successfulJobsHistoryLimit: 3
+failedJobsHistoryLimit: 5
+# Keep finished pods a week so `kubectl logs` still works on Monday afternoon.
+ttlSecondsAfterFinished: 604800
+# `sync` publishes; `plan` does everything but open the pull request (a dry run).
+command: sync
+
+# ---------------------------------------------------------------------------------------
+# What to publish, and where. Rendered into config.yml; nothing here is secret.
+# ---------------------------------------------------------------------------------------
+
+target:
+  # owner/name of the PUBLIC docs repository the pull request is opened on.
+  repo: ""
+  # Its default branch. Empty = ask the API. The job never writes to this branch.
+  base: ""
+  # Pull-request branch = branchPrefix + "upstream". Must follow the repo's branch rules.
+  branchPrefix: docs/sync-
+  mkdocs: mkdocs.yml
+  # A new section is inserted after this top-level nav entry the first time it appears;
+  # afterwards it stays between its markers wherever someone moves it.
+  navAfter: ""
+  labels: [documentation]
+  auth:
+    # github-app: an App installed on the docs repo with contents and pull-requests write
+    # (and issues write on report.issueRepo). Its id and key come from secrets.keys.
+    type: github-app
+    apiUrl: https://api.github.com
+
+# One entry per source repository. Adding a source is a values change plus, for a private
+# source, a read token and a url in the private mapping; nothing else.
+sources: []
+  # - # Public alias: appears in branch names, logs and the nav markers. Say nothing here
+  #   # that names the organisation you are anonymising.
+  #   name: cloud-platform
+  #   # Nav title of the generated section.
+  #   title: Cloud Platform
+  #   # Where the section lands in the docs repo.
+  #   target: docs/cloud-platform
+  #   ref: main
+  #   docsDir: docs
+  #   # The source's MkDocs file, whose nav becomes the section's nav.
+  #   nav: mkdocs.yml
+  #   include: ["**/*.md"]
+  #   exclude: []
+  #   # Leave empty and put the clone URL in the PRIVATE mapping (sources.<name>.url):
+  #   # a URL usually names the organisation, and values are not private.
+  #   url: ""
+  #   auth:
+  #     type: token
+  #     # Key in secrets.existingSecret holding a READ-ONLY token for this source.
+  #     tokenSecretKey: source-token-cloud-platform
+
+llm:
+  # claude-code: headless Claude Code (`claude -p`), the supported way to use a Claude
+  #   subscription from automation. With baseUrl set it routes through a LiteLLM gateway:
+  #   the subscription's OAuth token (secrets.keys.claudeOAuthToken) is the upstream
+  #   bearer, and the gateway's virtual key (secrets.keys.litellmApiKey) rides
+  #   x-litellm-api-key on the gateway's raw listener.
+  # anthropic: the Messages API with an API key (secrets.keys.anthropicApiKey).
+  # replay: answer from the cache only; any new question fails the run closed.
+  backend: claude-code
+  model: claude-sonnet-4-6-max
+  baseUrl: ""
+  effort: low
+  # Caps thinking per call. Classification and repair are short answers, and on a
+  # subscription every thinking token counts against the same rate limit.
+  thinkingTokens: 2048
+  timeoutSeconds: 300
+  batchSize: 40
+
+# Languages whose everyday words the novelty scan need not ask about.
+languages: [en]
+
+report:
+  # owner/name to file the "sync blocked" issue on. The issue names no term, only
+  # counts and proposed stand-ins, so a public repository is fine. Empty = no issue.
+  issueRepo: ""
+
+# ---------------------------------------------------------------------------------------
+# Secrets: ONE existing Secret (an ExternalSecret, in any real deployment). The chart
+# never creates Secrets: the mapping is the key that undoes the anonymisation, and a
+# value written into Helm values lives on in every release's history.
+# ---------------------------------------------------------------------------------------
+
+secrets:
+  # The Secret's name. An ExternalSecret of the same name is the intended owner.
+  existingSecret: docs-distributor
+  keys:
+    # The PRIVATE mapping. One key, or several (they are merged in order), so a large
+    # mapping can be split across a secret store's size limit.
+    mapping: [mapping.yml]
+    githubAppId: github-app-id
+    # Optional: looked up from the target repo when absent.
+    githubAppInstallationId: github-app-installation-id
+    githubAppPrivateKey: github-app-private-key
+    claudeOAuthToken: claude-oauth-token
+    litellmApiKey: litellm-api-key
+    # Only for llm.backend=anthropic.
+    anthropicApiKey: ""
+    # Optional. A Slack incoming webhook for the run summary.
+    slackWebhook: slack-webhook-url
+
+# ---------------------------------------------------------------------------------------
+# State: the LLM cache (what makes re-runs byte-identical) and the PRIVATE run reports.
+# ---------------------------------------------------------------------------------------
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  size: 1Gi
+  storageClass: ""
+  accessModes: [ReadWriteOnce]
+  annotations: {}
+# Without a persistent cache every run asks the model again and rewords repaired prose,
+# so the docs repo gets a fresh diff every week. Set true only for a throwaway install.
+allowEphemeralCache: false
+
+# ---------------------------------------------------------------------------------------
+# Pod
+# ---------------------------------------------------------------------------------------
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  # `mkdocs build --strict` of the whole docs site and the claude CLI are the peaks.
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+extraEnv: []
+
+networkPolicy:
+  enabled: false
+  # Port of the in-cluster model gateway, allowed alongside DNS and HTTPS.
+  gatewayPort: 4000
+  # Extra policy/v1 egress rules.
+  egress: []

@@ -1,0 +1,30 @@
+# Values CI renders the chart with. Not an example deployment: the point is to exercise
+# every template, so the optional parts are on.
+target:
+  repo: example-org/docs
+  navAfter: Platform
+sources:
+  - name: cloud-platform
+    title: Cloud Platform
+    target: docs/cloud-platform
+    auth:
+      tokenSecretKey: source-token-cloud-platform
+  - name: public-handbook
+    title: Handbook
+    target: docs/handbook
+    url: https://github.com/example-org/handbook.git
+    auth:
+      type: none
+llm:
+  baseUrl: http://litellm.automation.svc.cluster.local:4000
+report:
+  issueRepo: example-org/docs-distributor
+secrets:
+  existingSecret: docs-distributor
+  keys:
+    mapping: [mapping.yml, mapping-people.yml]
+timeZone: Europe/Amsterdam
+networkPolicy:
+  enabled: true
+nodeSelector:
+  kubernetes.io/arch: arm64

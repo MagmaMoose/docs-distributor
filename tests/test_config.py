@@ -98,7 +98,9 @@ def test_mapping_directory_merges_in_lexical_order(tmp_path: Path) -> None:
 def test_binary_clearance_needs_a_real_digest_and_a_reason() -> None:
     with pytest.raises(config.ConfigError):
         mapping(sources={"s": {"binaries": [{"path": "a.png", "sha256": "abc", "why": "x"}]}})
-    ok = mapping(sources={"s": {"binaries": [{"path": "a.png", "sha256": "a" * 64, "why": "reviewed"}]}})
+    ok = mapping(
+        sources={"s": {"binaries": [{"path": "a.png", "sha256": "a" * 64, "why": "reviewed"}]}}
+    )
     assert ok.cleared_binaries() == {"a" * 64}
 
 
@@ -123,13 +125,17 @@ def test_runtime_config_parses_and_rejects_bad_sources() -> None:
     cfg = config.parse_config(
         {
             "target": {"repo": "owner/docs", "navAfter": "Platform"},
-            "sources": [{"name": "cloud-platform", "target": "docs/cloud-platform", "title": "Cloud"}],
+            "sources": [
+                {"name": "cloud-platform", "target": "docs/cloud-platform", "title": "Cloud"}
+            ],
         }
     )
     assert cfg.sources[0].url is None
     assert cfg.target.auth.kind == "github-app"
     with pytest.raises(config.ConfigError):
-        config.parse_config({"target": {"repo": "x"}, "sources": [{"name": "Bad Name", "target": "/etc"}]})
+        config.parse_config(
+            {"target": {"repo": "x"}, "sources": [{"name": "Bad Name", "target": "/etc"}]}
+        )
 
 
 def test_overlapping_targets_are_refused() -> None:

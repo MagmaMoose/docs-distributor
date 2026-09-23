@@ -102,7 +102,9 @@ class AllowEntry:
     def __post_init__(self) -> None:
         given = [x for x in (self.value, self.pattern, self.context) if x is not None]
         if len(given) != 1:
-            raise ValueError(f"allow entry for {self.cls!r} needs exactly one of value/pattern/context")
+            raise ValueError(
+                f"allow entry for {self.cls!r} needs exactly one of value/pattern/context"
+            )
         if not self.why.strip():
             raise ValueError(f"allow entry for {self.cls!r} has no justification")
 
@@ -271,7 +273,9 @@ class _LiteralMatcher:
         whole = [_spaced(lit.value) for lit in ordered if lit.whole_word]
         self._loose = re.compile("|".join(loose), re.IGNORECASE) if loose else None
         self._whole = (
-            re.compile(r"(?<![A-Za-z0-9])(?:" + "|".join(whole) + r")(?![A-Za-z0-9])", re.IGNORECASE)
+            re.compile(
+                r"(?<![A-Za-z0-9])(?:" + "|".join(whole) + r")(?![A-Za-z0-9])", re.IGNORECASE
+            )
             if whole
             else None
         )
@@ -362,7 +366,9 @@ class PatternClass:
     find: _Finder
 
 
-def _regex(pattern: str, *, group: int | str = 0, flags: int = 0, keep: Callable[[str], bool] | None = None) -> _Finder:
+def _regex(
+    pattern: str, *, group: int | str = 0, flags: int = 0, keep: Callable[[str], bool] | None = None
+) -> _Finder:
     rx = re.compile(pattern, flags)
 
     def find(text: str) -> Iterator[tuple[int, int, str]]:
@@ -405,27 +411,157 @@ def _has_digit_and_letter(value: str) -> bool:
 # to exactly the hosts it exists to catch. Most code expressions never reach this list
 # anyway, because their last label is not a TLD.
 _CODE_ROOTS = frozenset(
-    "var local locals module inputs secrets env steps matrix needs vars self this each count "
-    "terraform runner strategy".split()
+    [
+        "var",
+        "local",
+        "locals",
+        "module",
+        "inputs",
+        "secrets",
+        "env",
+        "steps",
+        "matrix",
+        "needs",
+        "vars",
+        "self",
+        "this",
+        "each",
+        "count",
+        "terraform",
+        "runner",
+        "strategy",
+    ]
 )
 
 # Two-letter endings that are file extensions far more often than country domains. A real
 # domain on one of these is still caught by the literal layer when it is in the mapping.
 _EXTENSION_TLDS = frozenset(
-    "md py sh tf rs pl ps cs rb js ts go cc hs ml mk in db so gz xz bz ac am sv vb fs el lo la "
-    "pm cm ex".split()
+    [
+        "md",
+        "py",
+        "sh",
+        "tf",
+        "rs",
+        "pl",
+        "ps",
+        "cs",
+        "rb",
+        "js",
+        "ts",
+        "go",
+        "cc",
+        "hs",
+        "ml",
+        "mk",
+        "in",
+        "db",
+        "so",
+        "gz",
+        "xz",
+        "bz",
+        "ac",
+        "am",
+        "sv",
+        "vb",
+        "fs",
+        "el",
+        "lo",
+        "la",
+        "pm",
+        "cm",
+        "ex",
+    ]
 )
 
 # Generic and geographic TLDs an organisation registers. Every two-letter label is also
 # treated as a country code (minus the extensions above), which is where most leaks live.
 _GENERIC_TLDS = frozenset(
-    "com net org info biz edu gov mil int aero asia coop jobs mobi museum pro tel travel "
-    "app dev page cloud tech online site website store shop blog xyz top club vip live news "
-    "link life world today email digital systems services solutions software "
-    "technology tools agency company consulting group global media studio design space zone "
-    "security support team works host hosting icu one global amsterdam frl brussels "
-    "vlaanderen gent berlin hamburg koeln london paris wien nyc tokyo microsoft azure google "
-    "amazon aws".split()
+    [
+        "com",
+        "net",
+        "org",
+        "info",
+        "biz",
+        "edu",
+        "gov",
+        "mil",
+        "int",
+        "aero",
+        "asia",
+        "coop",
+        "jobs",
+        "mobi",
+        "museum",
+        "pro",
+        "tel",
+        "travel",
+        "app",
+        "dev",
+        "page",
+        "cloud",
+        "tech",
+        "online",
+        "site",
+        "website",
+        "store",
+        "shop",
+        "blog",
+        "xyz",
+        "top",
+        "club",
+        "vip",
+        "live",
+        "news",
+        "link",
+        "life",
+        "world",
+        "today",
+        "email",
+        "digital",
+        "systems",
+        "services",
+        "solutions",
+        "software",
+        "technology",
+        "tools",
+        "agency",
+        "company",
+        "consulting",
+        "group",
+        "global",
+        "media",
+        "studio",
+        "design",
+        "space",
+        "zone",
+        "security",
+        "support",
+        "team",
+        "works",
+        "host",
+        "hosting",
+        "icu",
+        "one",
+        "global",
+        "amsterdam",
+        "frl",
+        "brussels",
+        "vlaanderen",
+        "gent",
+        "berlin",
+        "hamburg",
+        "koeln",
+        "london",
+        "paris",
+        "wien",
+        "nyc",
+        "tokyo",
+        "microsoft",
+        "azure",
+        "google",
+        "amazon",
+        "aws",
+    ]
 )
 
 
@@ -455,7 +591,17 @@ def _find_domains(text: str) -> Iterator[tuple[int, int, str]]:
         yield m.start(1), m.end(1), host
 
 
-_PRIVATE_SUFFIXES = ("internal", "local", "lan", "corp", "intranet", "intra", "private", "localdomain", "home.arpa")
+_PRIVATE_SUFFIXES = (
+    "internal",
+    "local",
+    "lan",
+    "corp",
+    "intranet",
+    "intra",
+    "private",
+    "localdomain",
+    "home.arpa",
+)
 _PRIVATE_HOST = re.compile(
     r"(?<![A-Za-z0-9._-])((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:"
     + "|".join(re.escape(s) for s in _PRIVATE_SUFFIXES)
@@ -495,7 +641,9 @@ def _find_public_ipv4(text: str) -> Iterator[tuple[int, int, str]]:
             yield m.start(), m.end(), m.group(0)
 
 
-_IPV6_CANDIDATE = re.compile(r"(?<![0-9A-Za-z:.])([0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7})(/\d{1,3})?(?![0-9A-Za-z:])")
+_IPV6_CANDIDATE = re.compile(
+    r"(?<![0-9A-Za-z:.])([0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7})(/\d{1,3})?(?![0-9A-Za-z:])"
+)
 
 
 def _find_public_ipv6(text: str) -> Iterator[tuple[int, int, str]]:
@@ -536,7 +684,16 @@ _CREDENTIAL = re.compile(
     r"(?i)(?<![A-Za-z0-9])(?:password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret)"
     r"(?![A-Za-z0-9])\s*[:=]\s*['\"]?(?P<v>[^\s'\"`<>{}$]{8,})"
 )
-_REFERENCE_MARKERS = ("os.environ", "secretkeyref", "valuefrom", "vault:", "op://", "keyvault", "ref+", "env:")
+_REFERENCE_MARKERS = (
+    "os.environ",
+    "secretkeyref",
+    "valuefrom",
+    "vault:",
+    "op://",
+    "keyvault",
+    "ref+",
+    "env:",
+)
 
 
 def _find_credentials(text: str) -> Iterator[tuple[int, int, str]]:
@@ -565,11 +722,14 @@ PATTERN_CLASSES: tuple[PatternClass, ...] = (
     PatternClass(
         "uuid",
         "Azure subscription, tenant, client and object IDs are UUIDs and identify the estate.",
-        _regex(r"(?<![0-9A-Za-z-])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9A-Za-z-])"),
+        _regex(
+            r"(?<![0-9A-Za-z-])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9A-Za-z-])"
+        ),
     ),
     PatternClass(
         "truncated-id",
-        "A shortened hex identifier is still that identifier; truncation is how IDs slipped past a literal list.",
+        "A shortened hex identifier is still that identifier: truncation is how IDs slipped "
+        "past a literal list.",
         _regex(
             r"(?<![0-9A-Za-z])([0-9a-fA-F]{6,}(?:-[0-9a-fA-F]{1,12})*)-?" + _ELLIPSIS,
             group=1,
@@ -583,7 +743,8 @@ PATTERN_CLASSES: tuple[PatternClass, ...] = (
     ),
     PatternClass(
         "ipv4-public",
-        "A public address outside the documentation ranges belongs to someone, often the source org.",
+        "A public address outside the documentation ranges belongs to someone, often the "
+        "source org.",
         _find_public_ipv4,
     ),
     PatternClass("ipv6-public", "As ipv4-public, for IPv6.", _find_public_ipv6),
@@ -597,23 +758,54 @@ PATTERN_CLASSES: tuple[PatternClass, ...] = (
         "Internal DNS suffixes (.internal, .corp, .local, ...) name private infrastructure.",
         _find_private_hosts,
     ),
-    PatternClass("email", "An address outside the placeholder domains names a person or a team.", _find_emails),
+    PatternClass(
+        "email",
+        "An address outside the placeholder domains names a person or a team.",
+        _find_emails,
+    ),
     PatternClass("gps", "A decimal coordinate pair locates a site.", _find_gps),
     PatternClass(
         "age-recipient",
-        "An age recipient is a public key, but a unique one: it ties the page to one key custodian.",
+        "An age recipient is a public key, but a unique one: it ties the page to one key "
+        "custodian.",
         _regex(r"(?<![A-Za-z0-9])age1[a-z0-9]{10,}"),
     ),
     PatternClass("age-secret-key", "An age private key.", _regex(r"AGE-SECRET-KEY-1[0-9A-Z]{10,}")),
-    PatternClass("aws-access-key-id", "An AWS access key ID.", _regex(r"(?<![A-Z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}(?![A-Z0-9])")),
+    PatternClass(
+        "aws-access-key-id",
+        "An AWS access key ID.",
+        _regex(r"(?<![A-Z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}(?![A-Z0-9])"),
+    ),
     PatternClass("slack-token", "A Slack token.", _vendor_token(r"xox[baprs]-", r"[A-Za-z0-9-]*")),
-    PatternClass("github-token", "A GitHub token.", _vendor_token(r"gh[pousr]_|github_pat_", r"[A-Za-z0-9_]{20,}")),
-    PatternClass("anthropic-key", "An Anthropic API key or OAuth token.", _vendor_token(r"sk-ant-", r"[A-Za-z0-9_-]{8,}")),
-    PatternClass("openai-style-key", "An OpenAI or LiteLLM virtual key.", _vendor_token(r"sk-(?:proj-)?", r"[A-Za-z0-9]{20,}")),
-    PatternClass("onepassword-token", "A 1Password service-account token.", _vendor_token(r"ops_", r"[A-Za-z0-9_-]{20,}")),
+    PatternClass(
+        "github-token",
+        "A GitHub token.",
+        _vendor_token(r"gh[pousr]_|github_pat_", r"[A-Za-z0-9_]{20,}"),
+    ),
+    PatternClass(
+        "anthropic-key",
+        "An Anthropic API key or OAuth token.",
+        _vendor_token(r"sk-ant-", r"[A-Za-z0-9_-]{8,}"),
+    ),
+    PatternClass(
+        "openai-style-key",
+        "An OpenAI or LiteLLM virtual key.",
+        _vendor_token(r"sk-(?:proj-)?", r"[A-Za-z0-9]{20,}"),
+    ),
+    PatternClass(
+        "onepassword-token",
+        "A 1Password service-account token.",
+        _vendor_token(r"ops_", r"[A-Za-z0-9_-]{20,}"),
+    ),
     PatternClass("google-api-key", "A Google API key.", _regex(r"AIza[0-9A-Za-z_-]{35}")),
-    PatternClass("google-oauth-secret", "A Google OAuth client secret.", _vendor_token(r"GOCSPX-", r"[A-Za-z0-9_-]{10,}")),
-    PatternClass("private-key", "A private key block.", _regex(r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----")),
+    PatternClass(
+        "google-oauth-secret",
+        "A Google OAuth client secret.",
+        _vendor_token(r"GOCSPX-", r"[A-Za-z0-9_-]{10,}"),
+    ),
+    PatternClass(
+        "private-key", "A private key block.", _regex(r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----")
+    ),
     PatternClass(
         "jwt",
         "A signed token carries claims that name the issuer and subject.",
@@ -622,10 +814,16 @@ PATTERN_CLASSES: tuple[PatternClass, ...] = (
     PatternClass(
         "webhook-url",
         "Incoming-webhook URLs are bearer credentials.",
-        _regex(r"https://(?:hooks\.slack\.com/services|[A-Za-z0-9-]+\.webhook\.office\.com|discord(?:app)?\.com/api/webhooks)/[^\s)>\]]+"),
+        _regex(
+            r"https://(?:hooks\.slack\.com/services|[A-Za-z0-9-]+\.webhook\.office\.com|discord(?:app)?\.com/api/webhooks)/[^\s)>\]]+"
+        ),
     ),
     PatternClass("azure-sas", "An Azure SAS signature.", _regex(r"[?&]sig=[A-Za-z0-9%/+=]{20,}")),
-    PatternClass("azure-account-key", "An Azure storage account key.", _regex(r"AccountKey=[A-Za-z0-9+/=]{20,}")),
+    PatternClass(
+        "azure-account-key",
+        "An Azure storage account key.",
+        _regex(r"AccountKey=[A-Za-z0-9+/=]{20,}"),
+    ),
     PatternClass(
         "credential",
         "A password, secret or token assigned inline in an example.",
@@ -674,7 +872,9 @@ def _scan_text(
             continue
         line, col = at(start)
         findings.append(
-            Finding(1, "literal-truncated", label, line, col, text[start:end], f"truncated {lit.origin}")
+            Finding(
+                1, "literal-truncated", label, line, col, text[start:end], f"truncated {lit.origin}"
+            )
         )
         literal_spans.append((start, end))
 
@@ -720,7 +920,15 @@ def audit_files(
             digest = hashlib.sha256(data).hexdigest()
             if digest not in cleared_binaries:
                 findings.append(
-                    Finding(2, "binary-not-cleared", path, 0, 0, digest, "binary content no human has cleared by hash")
+                    Finding(
+                        2,
+                        "binary-not-cleared",
+                        path,
+                        0,
+                        0,
+                        digest,
+                        "binary content no human has cleared by hash",
+                    )
                 )
             continue
         findings.extend(_scan_text(path, text, rules, matcher))
@@ -750,12 +958,22 @@ def _novelty_findings(novelty: Novelty) -> Iterator[Finding]:
         decision = novelty.decisions.get(cand.term.casefold())
         if decision is None:
             yield Finding(
-                3, "novelty-unclassified", path, int(line or 0), 0, cand.term,
+                3,
+                "novelty-unclassified",
+                path,
+                int(line or 0),
+                0,
+                cand.term,
                 "unmapped name-like term was never classified",
             )
         elif decision.sensitive:
             yield Finding(
-                3, "novelty-sensitive", path, int(line or 0), 0, cand.term,
+                3,
+                "novelty-sensitive",
+                path,
+                int(line or 0),
+                0,
+                cand.term,
                 f"classified sensitive ({decision.origin}) and has no mapping",
             )
 

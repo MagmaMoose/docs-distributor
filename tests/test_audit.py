@@ -149,7 +149,7 @@ def test_truncation_shorter_than_six_characters_is_not_a_finding() -> None:
 
 
 def test_personal_name_in_a_code_comment_is_caught() -> None:
-    text = "```hcl\nresource \"x\" \"y\" {\n  # TODO(jan.devries): rotate this\n}\n```\n"
+    text = '```hcl\nresource "x" "y" {\n  # TODO(jan.devries): rotate this\n}\n```\n'
     findings = run(text)
     assert [f.rule for f in findings] == ["literal"]
     assert findings[0].line == 3

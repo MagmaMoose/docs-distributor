@@ -25,8 +25,32 @@ import yaml
 from docs_distributor import audit
 
 RULE_CLASSES = frozenset(
-    "org repo domain host url person handle email customer vendor product project account "
-    "subscription tenant uuid ip cidr path cluster namespace secret location other".split()
+    [
+        "org",
+        "repo",
+        "domain",
+        "host",
+        "url",
+        "person",
+        "handle",
+        "email",
+        "customer",
+        "vendor",
+        "product",
+        "project",
+        "account",
+        "subscription",
+        "tenant",
+        "uuid",
+        "ip",
+        "cidr",
+        "path",
+        "cluster",
+        "namespace",
+        "secret",
+        "location",
+        "other",
+    ]
 )
 CASE_MODES = ("insensitive", "exact", "preserve")
 BOUNDARY_MODES = ("auto", "word", "none")
@@ -324,7 +348,9 @@ def parse_mapping(documents: Sequence[tuple[str, Any]], vocabulary: Vocabulary) 
                 rules.append(rule)
         for name, spec in (data.get("sources") or {}).items():
             sources.setdefault(str(name), {}).update(spec or {})
-        private_hosts.extend(str(h).lower() for h in _as_list((data.get("links") or {}).get("private_hosts")))
+        private_hosts.extend(
+            str(h).lower() for h in _as_list((data.get("links") or {}).get("private_hosts"))
+        )
         allow_items.extend(_as_list(data.get("allow")))
         for i, item in enumerate(_as_list(data.get("deny"))):
             if not isinstance(item, dict) or not item.get("value") or not item.get("why"):
@@ -344,7 +370,9 @@ def parse_mapping(documents: Sequence[tuple[str, Any]], vocabulary: Vocabulary) 
             if not re.fullmatch(r"[0-9a-fA-F]{64}", str(b["sha256"])):
                 problems.append(f"source {name}: binary {i + 1}: sha256 is not 64 hex characters")
                 continue
-            binaries.append(BinaryClearance(str(b["path"]), str(b["sha256"]).lower(), str(b["why"])))
+            binaries.append(
+                BinaryClearance(str(b["path"]), str(b["sha256"]).lower(), str(b["why"]))
+            )
         parsed_sources[name] = SourcePrivate(
             url=None if spec.get("url") is None else str(spec["url"]),
             drop=tuple(str(g) for g in _as_list(spec.get("drop"))),
@@ -424,12 +452,7 @@ def _check_rules(rules: Sequence[MappingRule], vocabulary: Vocabulary) -> list[s
     by accident."""
     problems: list[str] = []
     seen: dict[str, int] = {}
-    reals = [
-        (r, v.casefold())
-        for r in rules
-        if not r.regex
-        for v in (r.source, *r.variants)
-    ]
+    reals = [(r, v.casefold()) for r in rules if not r.regex for v in (r.source, *r.variants)]
     for rule, value in reals:
         if value in seen and seen[value] != rule.index:
             problems.append(f"{rule.label}: duplicates the value of rule {seen[value]}")
@@ -437,7 +460,9 @@ def _check_rules(rules: Sequence[MappingRule], vocabulary: Vocabulary) -> list[s
 
     # Vocabulary only. Counting the mapping's own targets as placeholders here would exempt
     # every target from the very check that is meant to vet it.
-    empty = audit.Rules(literals=(), allow=audit.Allowlist(), placeholders=vocabulary.placeholders())
+    empty = audit.Rules(
+        literals=(), allow=audit.Allowlist(), placeholders=vocabulary.placeholders()
+    )
     for rule in rules:
         target = rule.target.casefold()
         for other, value in reals:
@@ -452,7 +477,8 @@ def _check_rules(rules: Sequence[MappingRule], vocabulary: Vocabulary) -> list[s
         hits = audit.audit_files({}, empty, extra_texts={"placeholder": rule.target}).findings
         if hits:
             problems.append(
-                f"{rule.label}: its placeholder would fail the audit ({', '.join(sorted({h.rule for h in hits}))})"
+                f"{rule.label}: its placeholder would fail the audit "
+                f"({', '.join(sorted({h.rule for h in hits}))})"
             )
     return problems
 
@@ -483,11 +509,15 @@ def load_mapping(path: Path, vocabulary: Vocabulary) -> PrivateMapping:
     return parse_mapping(mapping_documents(path), vocabulary)
 
 
-def build_rules(mapping: PrivateMapping | None, allow: AllowRules, vocabulary: Vocabulary) -> audit.Rules:
+def build_rules(
+    mapping: PrivateMapping | None, allow: AllowRules, vocabulary: Vocabulary
+) -> audit.Rules:
     """The audit's view of all inputs: literals from the mapping, the merged allowlist, and
     the vocabulary's placeholders."""
     if mapping is None:
-        return audit.Rules(literals=(), allow=allow.allowlist, placeholders=vocabulary.placeholders())
+        return audit.Rules(
+            literals=(), allow=allow.allowlist, placeholders=vocabulary.placeholders()
+        )
     return audit.Rules(
         literals=tuple(mapping.literals()),
         allow=audit.Allowlist(allow.allowlist.entries + mapping.allow.allowlist.entries),

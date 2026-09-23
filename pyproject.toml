@@ -47,6 +47,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/docs_distributor"]
 
+# The prompt templates live at the repo root (they are reviewed like code and versioned for
+# the cache key) and ship inside the package.
+[tool.hatch.build.targets.wheel.force-include]
+"prompts" = "docs_distributor/prompts"
+
 [tool.hatch.version]
 path = "src/docs_distributor/__init__.py"
 

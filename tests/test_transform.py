@@ -279,3 +279,18 @@ def test_tree_transform_is_deterministic() -> None:
     two = {k: v.content for k, v in transform_tree(files, **kw).files.items()}  # type: ignore[arg-type]
     assert one == two
     assert Counter(transform_tree(files, **kw).rule_hits)  # type: ignore[arg-type]
+
+
+def test_padding_after_the_rest_of_the_token_is_used_and_punctuation_is_not_misread() -> None:
+    s = subst({"from": "hb-acc", "to": "cluster-acceptance", "class": "cluster"})
+    block = "├── hb-acc/                 # acceptance\n├── shared/                 # dns\n"
+    res = s.apply(block, code=True)
+    a, b = res.text.splitlines()
+    assert a.index("#") == b.index("#")
+    yaml_line = "hb-acc:                value\nother:                 value\n"
+    res = s.apply(yaml_line, code=True)
+    assert [
+        d.kind for d in find_damage("p.md", yaml_line, res.text, res.replacements, True, 1)
+    ] == []
+    a, b = res.text.splitlines()
+    assert a.index("value") == b.index("value")

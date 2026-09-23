@@ -156,8 +156,10 @@ class Substituter:
                     misaligned.append(m.start() + shift)
             start_out = m.start() + shift
             out.append(target)
+            # The span may now include the rest of the token and its padding; record what it
+            # replaced, so punctuation checks compare like with like.
             replacements.append(
-                Replacement(rule.index, start_out, start_out + len(target), original)
+                Replacement(rule.index, start_out, start_out + len(target), text[m.start() : end])
             )
             shift += len(target) - (end - m.start())
             moved.append((end, shift))
@@ -178,23 +180,28 @@ class Substituter:
 def _keep_columns(text: str, start: int, end: int, target: str) -> tuple[str, int, bool]:
     """Absorb a length change into the padding that follows, when there is padding.
 
-    Returns the (possibly padded) target, the input offset the replacement now extends to,
-    and whether a longer value could not be absorbed.
+    The padding is the first run of spaces after the replaced value and the rest of its
+    token, so ``hb-acc/        # comment`` keeps its comment column when ``hb-acc`` grows.
+    Returns the (possibly re-padded) replacement, the input offset it now extends to, and
+    whether a longer value could not be absorbed.
     """
     delta = len(target) - (end - start)
     if delta == 0:
         return target, end, False
     line_end = text.find("\n", end)
     line_end = len(text) if line_end == -1 else line_end
-    spaces = len(text[end:line_end]) - len(text[end:line_end].lstrip(" "))
-    after = text[end + spaces : end + spaces + 1]
-    aligned = spaces >= 2 or (spaces >= 1 and after and after in _BORDER)
+    m = re.match(r"([^ ]*)( +)", text[end:line_end])
+    if m is None:
+        return target, end, False
+    rest, spaces = m.group(1), len(m.group(2))
+    after = text[end + m.end() : end + m.end() + 1]
+    aligned = spaces >= 2 or (after != "" and after in _BORDER)
     if not aligned:
         return target, end, False
     new_spaces = spaces - delta
     if new_spaces < 1:
-        return target + " ", end + spaces, True
-    return target + " " * new_spaces, end + spaces, False
+        return target + rest + " ", end + m.end(), True
+    return target + rest + " " * new_spaces, end + m.end(), False
 
 
 # --- Markdown structure ------------------------------------------------------------------
